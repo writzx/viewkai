@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>viewkai demo</title>
+    <style>
+      html, body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <!-- PDFium WASM: factory-function pattern. Must load before app WASM. -->
+    <script src="pdfium.js"></script>
+    <script>
+      // Initialise PDFium and make the module available globally.
+      // viewkai-demo's eframe WASM starts after this promise resolves
+      // so pdfium-render finds PDFium bindings already in place.
+      PDFiumModule().then(function (m) {
+        window.Module = m;
+        window.pdfiumReady = true;
+      });
+    </script>
+    <!-- trunk injects the compiled eframe WASM bundle here -->
+    <link data-trunk rel="rust" />
+  </body>
+</html>
