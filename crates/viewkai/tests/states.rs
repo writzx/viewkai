@@ -1,7 +1,7 @@
 use egui_kittest::{Harness, kittest::Queryable};
 use std::sync::{Mutex, OnceLock};
-use viewkai::zoom::ZoomState;
 use viewkai::Viewer;
+use viewkai::zoom::ZoomState;
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -10,7 +10,9 @@ fn test_lock() -> &'static Mutex<()> {
 
 #[test]
 fn viewer_empty_state_renders_placeholder() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let viewer = Viewer::new();
@@ -28,7 +30,9 @@ fn viewer_empty_state_renders_placeholder() {
 
 #[test]
 fn viewer_error_state_surfaces_and_retries() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let mut viewer = Viewer::new();
@@ -52,7 +56,9 @@ fn viewer_error_state_surfaces_and_retries() {
 
 #[test]
 fn viewer_scroll_to_page_advances_layout() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/500page.pdf").to_vec();
@@ -80,7 +86,9 @@ fn viewer_scroll_to_page_advances_layout() {
 
 #[test]
 fn viewer_zoom_setter_roundtrips() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
@@ -118,7 +126,9 @@ fn viewer_zoom_setter_roundtrips() {
 
 #[test]
 fn viewer_loaded_state_renders_pages() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
@@ -134,14 +144,19 @@ fn viewer_loaded_state_renders_pages() {
     harness.run_ok();
 
     assert_eq!(harness.state().page_count(), 1);
-    let size = harness.state().page_size_pt(0).expect("page 0 should exist");
+    let size = harness
+        .state()
+        .page_size_pt(0)
+        .expect("page 0 should exist");
     assert!(size.x > 0.0, "page width > 0");
     assert!(size.y > 0.0, "page height > 0");
 }
 
 #[test]
 fn viewer_clear_resets_to_empty() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();

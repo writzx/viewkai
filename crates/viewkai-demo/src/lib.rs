@@ -91,10 +91,10 @@ impl DemoApp {
                 } else {
                     String::new()
                 };
-                self.debug_info = Some(
-                    Self::describe_pdf(&bytes)
-                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
-                );
+                self.debug_info =
+                    Some(Self::describe_pdf(&bytes).unwrap_or_else(|err| {
+                        format!("PDF loaded; debug info unavailable: {err}")
+                    }));
                 self.load_state = DemoLoadState::Loaded;
             }
             Err(err) => {
@@ -399,7 +399,11 @@ impl eframe::App for DemoApp {
             });
 
             if scroll_delta.abs() > 0.1 {
-                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
+                let factor = if scroll_delta > 0.0 {
+                    1.1_f32
+                } else {
+                    1.0 / 1.1
+                };
                 self.apply_zoom_factor(factor);
             }
 

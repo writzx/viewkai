@@ -9,9 +9,12 @@ fn viewer_loads_hello_pdf() {
     let mut viewer = Viewer::new();
     viewer.load_bytes(bytes).expect("should open hello.pdf");
 
-    let mut harness = Harness::new_ui_state(|ui, viewer| {
-        viewer.show(ui);
-    }, viewer);
+    let mut harness = Harness::new_ui_state(
+        |ui, viewer| {
+            viewer.show(ui);
+        },
+        viewer,
+    );
     harness.run_ok();
 
     let viewer = harness.state();

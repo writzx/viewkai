@@ -18,9 +18,12 @@ fn memory_budget_acceptance() {
 
     let mut harness = Harness::builder()
         .with_size(Vec2::new(1280.0, 900.0))
-        .build_ui_state(|ui, viewer| {
-            viewer.show(ui);
-        }, viewer);
+        .build_ui_state(
+            |ui, viewer| {
+                viewer.show(ui);
+            },
+            viewer,
+        );
 
     for page_idx in 0..page_count {
         harness.state_mut().scroll_to_page(page_idx);

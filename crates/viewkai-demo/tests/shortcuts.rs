@@ -20,7 +20,9 @@ fn ctrl() -> egui::Modifiers {
 
 #[test]
 fn shortcut_ctrl_0_resets_zoom() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness_with_hello();
 
     h.key_press_modifiers(ctrl(), egui::Key::Equals);
@@ -34,7 +36,9 @@ fn shortcut_ctrl_0_resets_zoom() {
 
 #[test]
 fn shortcut_ctrl_1_sets_fitwidth() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness_with_hello();
 
     h.key_press_modifiers(ctrl(), egui::Key::Num1);
@@ -45,7 +49,9 @@ fn shortcut_ctrl_1_sets_fitwidth() {
 
 #[test]
 fn shortcut_ctrl_2_sets_fitpage() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness_with_hello();
 
     h.key_press_modifiers(ctrl(), egui::Key::Num2);
@@ -56,7 +62,9 @@ fn shortcut_ctrl_2_sets_fitpage() {
 
 #[test]
 fn shortcut_ctrl_plus_minus_steps_zoom() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness_with_hello();
 
     h.key_press_modifiers(ctrl(), egui::Key::Equals);
@@ -74,7 +82,9 @@ fn shortcut_ctrl_plus_minus_steps_zoom() {
 
 #[test]
 fn shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness_with_hello();
 
     h.key_press_modifiers(ctrl(), egui::Key::G);
@@ -89,7 +99,9 @@ fn shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc() {
 
 #[test]
 fn demo_load_state_idle_to_loaded() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness();
     h.run_ok();
 
@@ -105,7 +117,9 @@ fn demo_load_state_idle_to_loaded() {
 
 #[test]
 fn demo_load_state_failed_dismiss_returns_to_idle() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
     let mut h = common::demo_harness();
 
     let err = h
@@ -115,7 +129,10 @@ fn demo_load_state_failed_dismiss_returns_to_idle() {
     assert!(!err.is_empty(), "failure should surface a message");
     h.run_ok();
 
-    assert!(matches!(h.state().load_state(), DemoLoadState::Failed { .. }));
+    assert!(matches!(
+        h.state().load_state(),
+        DemoLoadState::Failed { .. }
+    ));
     h.get_by_label("Dismiss").click();
     h.run_ok();
 
@@ -125,7 +142,9 @@ fn demo_load_state_failed_dismiss_returns_to_idle() {
 
 #[test]
 fn demo_harness_helpers_load_expected_fixtures() {
-    let _guard = test_lock().lock().unwrap_or_else(|poison| poison.into_inner());
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
 
     let hello = common::demo_harness_with_hello();
     assert!(matches!(hello.state().load_state(), DemoLoadState::Loaded));

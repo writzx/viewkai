@@ -1,6 +1,6 @@
 use egui_kittest::Harness;
-use viewkai::zoom::ZoomState;
 use viewkai::Viewer;
+use viewkai::zoom::ZoomState;
 
 fn make_snapshot_harness_empty() -> Harness<'static, Viewer> {
     let viewer = Viewer::new();
