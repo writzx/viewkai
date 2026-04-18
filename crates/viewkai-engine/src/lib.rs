@@ -16,7 +16,7 @@
 pub const NAME: &str = "viewkai-engine";
 
 use pdfium_render::prelude::*;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use viewkai_core::{
     error::{Error, Result},
     page::{PageIndex, PageSize},
@@ -25,6 +25,7 @@ use viewkai_core::{
 // ── Global pdfium singleton ──────────────────────────────────────────────────
 
 static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
+static PDFIUM_INIT_LOCK: Mutex<()> = Mutex::new(());
 
 /// Initialise the PDFium library.
 ///
@@ -37,6 +38,14 @@ static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
 /// On WASM this will error if `initialize_pdfium_render()` has not been called
 /// from JavaScript yet.
 pub fn init() -> Result<()> {
+    if PDFIUM.get().is_some() {
+        return Ok(());
+    }
+
+    let _guard = PDFIUM_INIT_LOCK
+        .lock()
+        .map_err(|e| Error::Pdfium(format!("pdfium init lock poisoned: {e}")))?;
+
     if PDFIUM.get().is_some() {
         return Ok(());
     }
@@ -115,18 +124,21 @@ impl Document {
         let (count, sizes) = {
             let doc = pdfium
                 .load_pdf_from_byte_slice(&bytes, None)
-                .map_err(|e| Error::Pdfium(e.to_string()))?;
+                .map_err(|_| Error::InvalidPdf)?;
 
             let count = doc.pages().len() as usize;
             let sizes = (0..count)
                 .map(|i| {
-                    let page = doc.pages().get(i as PdfPageIndex).unwrap();
-                    PageSize {
+                    let page = doc
+                        .pages()
+                        .get(i as PdfPageIndex)
+                        .map_err(|e| Error::Pdfium(e.to_string()))?;
+                    Ok(PageSize {
                         width_pt: page.width().value,
                         height_pt: page.height().value,
-                    }
+                    })
                 })
-                .collect::<Vec<_>>();
+                .collect::<Result<Vec<_>>>()?;
 
             (count, sizes)
         };
