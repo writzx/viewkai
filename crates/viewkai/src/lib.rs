@@ -17,7 +17,10 @@ pub mod zoom;
 
 pub const NAME: &str = "viewkai";
 
-use egui::{Color32, Rect, Sense, TextureHandle, TextureOptions, Vec2};
+use crate::cache::{CacheKey, TextureCache};
+use crate::viewport::VisibilityTracker;
+use crate::zoom::ZoomState;
+use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 use std::sync::Arc;
 use viewkai_core::{error::Result, page::PageIndex};
 use viewkai_engine::Document;
@@ -26,10 +29,6 @@ use viewkai_engine::Document;
 pub struct PageState {
     /// Page dimensions in PDF points (1 pt = 1/72 inch).
     pub size_pt: Vec2,
-    /// Uploaded egui texture, or `None` if not yet rasterized.
-    pub texture: Option<TextureHandle>,
-    /// Monotonic timestamp of the last rasterization (seconds since epoch).
-    pub last_rendered_at: f64,
 }
 
 /// Display state for the viewer.
@@ -48,6 +47,9 @@ enum ViewerState {
 /// to render the widget into the provided [`egui::Ui`].
 pub struct Viewer {
     state: ViewerState,
+    cache: TextureCache,
+    visibility: VisibilityTracker,
+    zoom: ZoomState,
 }
 
 impl Default for Viewer {
@@ -61,7 +63,18 @@ impl Viewer {
     pub fn new() -> Self {
         Self {
             state: ViewerState::Empty,
+            cache: TextureCache::default_budget(),
+            visibility: VisibilityTracker::new(2),
+            zoom: ZoomState::default(),
         }
+    }
+
+    pub fn set_zoom(&mut self, zoom: ZoomState) {
+        self.zoom = zoom;
+    }
+
+    pub fn zoom(&self) -> ZoomState {
+        self.zoom
     }
 
     /// Load a PDF from raw bytes.
@@ -85,14 +98,11 @@ impl Viewer {
                             .map(|page| Vec2::new(page.width_pt, page.height_pt))
                             .unwrap_or(Vec2::new(612.0, 792.0));
 
-                        PageState {
-                            size_pt: size,
-                            texture: None,
-                            last_rendered_at: 0.0,
-                        }
+                        PageState { size_pt: size }
                     })
                     .collect();
 
+                self.cache.clear();
                 self.state = ViewerState::Loaded {
                     document: Arc::new(doc),
                     pages,
@@ -110,6 +120,7 @@ impl Viewer {
     /// Drop the document and all textures, returning to the empty state.
     pub fn clear(&mut self) {
         self.state = ViewerState::Empty;
+        self.cache.clear();
     }
 
     /// Returns the number of pages in the loaded document, or 0 if no document is loaded.
@@ -157,7 +168,7 @@ impl Viewer {
                 });
             }
             ViewerState::Loaded { document, pages } => {
-                Self::show_pages(ui, document, pages);
+                Self::show_pages(ui, document, pages, &mut self.cache, &self.visibility, self.zoom);
             }
         }
 
@@ -166,53 +177,135 @@ impl Viewer {
         }
     }
 
-    fn show_pages(ui: &mut egui::Ui, document: &Arc<Document>, pages: &mut [PageState]) {
+    fn show_pages(
+        ui: &mut egui::Ui,
+        document: &Arc<Document>,
+        pages: &[PageState],
+        cache: &mut TextureCache,
+        visibility: &VisibilityTracker,
+        zoom: ZoomState,
+    ) {
         const GAP: f32 = 16.0;
         const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
-        const RENDER_DPI: u32 = 100;
 
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 let available_width = ui.available_width();
                 let viewport_rect = ui.clip_rect();
+                let now = ui.input(|i| i.time);
 
-                for (idx, page) in pages.iter_mut().enumerate() {
-                    let display_size = page.size_pt;
+                let effective_zoom = if let Some(first) = pages.first() {
+                    zoom.effective_zoom(
+                        available_width,
+                        viewport_rect.height(),
+                        first.size_pt.x,
+                        first.size_pt.y,
+                    )
+                } else {
+                    1.0
+                };
+
+                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
+
+                let mut page_tops = Vec::with_capacity(pages.len());
+                let mut cumulative_y = 0.0_f32;
+                for page in pages {
+                    page_tops.push(cumulative_y);
+                    cumulative_y += page.size_pt.y * effective_zoom + GAP;
+                }
+
+                let page_heights: Vec<f32> = pages
+                    .iter()
+                    .map(|page| page.size_pt.y * effective_zoom)
+                    .collect();
+
+                let scroll_offset = ui.clip_rect().min.y - ui.min_rect().min.y;
+                let vis_set = visibility.compute(
+                    scroll_offset.max(0.0),
+                    viewport_rect.height(),
+                    &page_tops,
+                    &page_heights,
+                );
+
+                let center_y = scroll_offset + viewport_rect.height() / 2.0;
+                let center_page = page_tops
+                    .iter()
+                    .enumerate()
+                    .min_by(|(_, a), (_, b)| {
+                        let da = (*a - center_y).abs();
+                        let db = (*b - center_y).abs();
+                        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .map(|(i, _)| i)
+                    .unwrap_or(0);
+
+                let mut to_render: Vec<usize> = vis_set.all_to_render().map(|page| page.0).collect();
+                to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+
+                for &idx in &to_render {
+                    let key = CacheKey {
+                        page_idx: PageIndex(idx),
+                        zoom_bucket,
+                    };
+
+                    if cache.get(&key, now).is_none() {
+                        if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi) {
+                            let byte_size = raw.pixels.len();
+                            let image = egui::ColorImage::from_rgba_unmultiplied(
+                                [raw.width as usize, raw.height as usize],
+                                &raw.pixels,
+                            );
+                            let handle = ui.ctx().load_texture(
+                                format!("viewkai/page/{idx}/dpi{dpi}"),
+                                image,
+                                TextureOptions::LINEAR,
+                            );
+                            cache.insert(key, handle, byte_size, now);
+                        }
+                    }
+                }
+
+                for (idx, page) in pages.iter().enumerate() {
+                    let display_size = Vec2::new(
+                        page.size_pt.x * effective_zoom,
+                        page.size_pt.y * effective_zoom,
+                    );
                     let x_offset = ((available_width - display_size.x) / 2.0).max(0.0);
                     let (row_rect, _) = ui.allocate_exact_size(
                         Vec2::new(available_width, display_size.y + GAP),
                         Sense::hover(),
                     );
-
                     let page_rect = Rect::from_min_size(
                         row_rect.min + Vec2::new(x_offset, 0.0),
                         display_size,
                     );
-                    let is_visible = page_rect.intersects(viewport_rect);
 
-                    if is_visible && page.texture.is_none() {
-                        if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), RENDER_DPI)
-                        {
-                            let image = egui::ColorImage::from_rgba_unmultiplied(
-                                [raw.width as usize, raw.height as usize],
-                                &raw.pixels,
-                            );
-                            let texture = ui.ctx().load_texture(
-                                format!("viewkai/page/{idx}"),
-                                image,
-                                TextureOptions::LINEAR,
-                            );
+                    let key = CacheKey {
+                        page_idx: PageIndex(idx),
+                        zoom_bucket,
+                    };
 
-                            page.texture = Some(texture);
-                            page.last_rendered_at = ui.input(|input| input.time);
-                        }
-                    }
+                    if let Some(texture) = cache.get(&key, now) {
+                        ui.painter().image(
+                            texture.id(),
+                            page_rect,
+                            Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                            Color32::WHITE,
+                        );
+                    } else {
+                        let fallback = (0..6_u8).find_map(|bucket| {
+                            let fallback_key = CacheKey {
+                                page_idx: PageIndex(idx),
+                                zoom_bucket: bucket,
+                            };
+                            cache.get(&fallback_key, now).map(|texture| texture.id())
+                        });
 
-                    match &page.texture {
-                        Some(texture) if is_visible => {
+                        if let Some(tex_id) = fallback {
                             ui.painter().image(
-                                texture.id(),
+                                tex_id,
                                 page_rect,
                                 Rect::from_min_max(
                                     egui::pos2(0.0, 0.0),
@@ -220,11 +313,9 @@ impl Viewer {
                                 ),
                                 Color32::WHITE,
                             );
-                        }
-                        _ => {
+                        } else {
                             ui.painter().rect_filled(page_rect, 0.0, PLACEHOLDER_FILL);
-
-                            if is_visible {
+                            if vis_set.pages.contains(&PageIndex(idx)) {
                                 egui::Spinner::new().paint_at(ui, page_rect);
                             }
                         }
