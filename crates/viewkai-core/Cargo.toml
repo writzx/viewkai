@@ -10,3 +10,6 @@ description = "Core types, errors, and coordinate math for viewkai"
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
