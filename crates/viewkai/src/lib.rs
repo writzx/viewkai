@@ -108,6 +108,22 @@ impl Viewer {
         self.state = ViewerState::Empty;
     }
 
+    /// Returns the number of pages in the loaded document, or 0 if no document is loaded.
+    pub fn page_count(&self) -> usize {
+        match &self.state {
+            ViewerState::Loaded { pages, .. } => pages.len(),
+            _ => 0,
+        }
+    }
+
+    /// Returns the page size in PDF points for the given index, if loaded.
+    pub fn page_size_pt(&self, idx: usize) -> Option<Vec2> {
+        match &self.state {
+            ViewerState::Loaded { pages, .. } => pages.get(idx).map(|page| page.size_pt),
+            _ => None,
+        }
+    }
+
     /// Render the viewer into the given [`egui::Ui`].
     ///
     /// - **Empty**: shows "No document loaded".

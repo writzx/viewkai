@@ -11,3 +11,6 @@ description = "Rust PDF viewer library targeting wasm32 and native, built on pdf
 viewkai-core = { path = "../viewkai-core" }
 viewkai-engine = { path = "../viewkai-engine" }
 egui = { workspace = true }
+
+[dev-dependencies]
+viewkai-engine = { path = "../viewkai-engine" }
