@@ -1,1 +1,37 @@
-Coming soon...
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>viewkai demo</title>
+    <style>
+      html, body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+    
+    
+  <link rel="modulepreload" href="./viewkai-demo-857ef5abe28869fa.js" crossorigin="anonymous" integrity="sha384-aOSJ5qqZTcLvOpGzsAh/U4d5+7PKVK+2JLayQOTKHMVenACvJBqi1FQMdfPXzvRs"><link rel="preload" href="./viewkai-demo-857ef5abe28869fa_bg.wasm" crossorigin="anonymous" integrity="sha384-Wt9DqzeXov1Rh+59//BxriIM6DO4ropnlCcRMK9yxnXO5GCP9Jb8TJB6YxKjUTGv" as="fetch" type="application/wasm"></head>
+  <body>
+    <!-- Keep this in sync with public/index.html for local web hosting. -->
+    <script src="pdfium.js"></script>
+    <script>
+      window.__pdfiumModule = null;
+      PDFiumModule().then((m) => {
+        window.__pdfiumModule = m;
+      });
+    </script>
+    
+<script type="module">
+import init, * as bindings from './viewkai-demo-857ef5abe28869fa.js';
+const wasm = await init({ module_or_path: './viewkai-demo-857ef5abe28869fa_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+    <canvas id="the_canvas_id"></canvas>
+  </body>
+</html>
