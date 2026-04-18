@@ -115,9 +115,7 @@ fn call_initialize_pdfium_render() -> Result<(), String> {
             )
             .map_err(|err| format!("initialize_pdfium_render call failed: {err:?}"))?;
     } else {
-        web_sys::console::warn_1(
-            &"initialize_pdfium_render not found, proceeding anyway".into(),
-        );
+        web_sys::console::warn_1(&"initialize_pdfium_render not found, proceeding anyway".into());
     }
 
     Ok(())

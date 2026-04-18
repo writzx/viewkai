@@ -90,7 +90,8 @@ fn vendor_pdfium_path() -> String {
 
 #[cfg(target_arch = "wasm32")]
 fn create_bindings() -> Result<Box<dyn PdfiumLibraryBindings>> {
-    Pdfium::bind_to_system_library().map_err(|e| Error::Pdfium(format!("WASM pdfium not ready: {e}")))
+    Pdfium::bind_to_system_library()
+        .map_err(|e| Error::Pdfium(format!("WASM pdfium not ready: {e}")))
 }
 
 // ── Document ─────────────────────────────────────────────────────────────────

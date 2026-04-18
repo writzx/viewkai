@@ -42,7 +42,7 @@ jobs:
       # Download pdfium binaries for Linux x64 (bblanchon, for native tests only)
       - name: Download pdfium (Linux x64)
         run: |
-          curl -fsSL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7789/pdfium-linux-x64.tgz" -o /tmp/pdfium.tgz
+          curl -fsSL --retry 5 --retry-delay 10 "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7789/pdfium-linux-x64.tgz" -o /tmp/pdfium.tgz
           tar xzf /tmp/pdfium.tgz -C /tmp lib/
           echo "PDFIUM_DYLIB_PATH=/tmp/lib/libpdfium.so" >> $GITHUB_ENV
       - run: cargo test --workspace
