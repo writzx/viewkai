@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.4] — 2026-04-18 — Testing Migration
+
+### Changed
+- Migrated tests from `egui::Context::default() + ctx.run()` to `egui_kittest::Harness`
+- `viewkai` and `viewkai-demo` dev-dependencies now include `egui_kittest = "0.34"` with `wgpu` + `snapshot` + `eframe` features
+
+### Added
+- `kittest.toml` at repo root with per-OS snapshot thresholds
+- `docs/testing.md` documenting the testing approach (four layers: L1a unit, L1b library widget, L1c library snapshot, L1d demo eframe integration)
+- Library-level tests covering Empty/Error/zoom/scroll/clear viewer states (`crates/viewkai/tests/states.rs`)
+- Library-level baseline snapshots (visual regression safety net) in `crates/viewkai/tests/snapshots/`
+- Demo-level eframe integration tests covering keyboard shortcuts (Ctrl+0/1/2/±/G), DemoLoadState transitions (`crates/viewkai-demo/tests/shortcuts.rs`)
+- `viewkai-demo` restructured as a library + binary crate. `DemoApp`, `DemoLoadState`, `run_native`, `run_web` are now public exports of `viewkai_demo`.
+- `DemoApp::load_bytes_sync(&mut self, Vec<u8>)` method — loads a PDF without going through the file dialog.
+- `DemoApp::viewer(&self) -> &Viewer` read-accessor for inspection.
+- `DemoApp::load_state(&self) -> &DemoLoadState` read-accessor for test state inspection.
+
+### Removed
+- All `#[allow(deprecated)]` attributes from test files
+
+### Notes
+- No user-facing API changes. No breaking changes.
+- Public API surface of `viewkai` library is bit-for-bit identical to v0.0.3.
+- Eframe is now a dev-dependency of `viewkai` via `egui_kittest["eframe"]`. It is NOT a runtime dependency; the purity invariant `cargo tree -p viewkai -e normal` still shows no eframe.
+- MSRV is explicitly not touched by this release. The pre-existing mismatch between workspace `edition = "2024"` and `clippy.toml`'s `msrv = "1.81"` is inherited tech debt from Plan 01 and remains unresolved.
+
 ## [0.0.3] — 2026-04-18 — Performant Viewer
 
 ### Added
