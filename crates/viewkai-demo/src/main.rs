@@ -1,8 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
+use viewkai::Viewer;
 use viewkai_core::page::PageIndex;
 use viewkai_engine::{Document, init};
+
+#[cfg(target_arch = "wasm32")]
+use std::sync::{Arc, Mutex};
 
 fn main() -> eframe::Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
@@ -121,43 +125,244 @@ fn call_initialize_pdfium_render() -> Result<(), String> {
     Ok(())
 }
 
+enum DemoLoadState {
+    Idle,
+    AcquiringBytes { label: String },
+    Loaded,
+    Failed { msg: String },
+}
+
 struct DemoApp {
-    info: String,
+    viewer: Viewer,
+    load_state: DemoLoadState,
+    #[cfg(target_arch = "wasm32")]
+    url_input: String,
+    debug_info: Option<String>,
+    #[cfg(target_arch = "wasm32")]
+    pending_bytes: Option<Arc<Mutex<Option<Result<Vec<u8>, String>>>>>,
 }
 
 impl DemoApp {
     fn new() -> Self {
         Self {
-            info: Self::load_pdf_info(),
+            viewer: Viewer::new(),
+            load_state: DemoLoadState::Idle,
+            #[cfg(target_arch = "wasm32")]
+            url_input: String::new(),
+            debug_info: None,
+            #[cfg(target_arch = "wasm32")]
+            pending_bytes: None,
         }
     }
 
-    fn load_pdf_info() -> String {
-        let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
+    fn describe_pdf(bytes: &[u8]) -> Result<String, String> {
+        let doc = Document::from_bytes(bytes.to_vec()).map_err(|err| err.to_string())?;
+        let size = doc
+            .page_size(PageIndex(0))
+            .map(|page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt))
+            .unwrap_or_else(|_| "unknown".to_owned());
 
-        match Document::from_bytes(bytes) {
-            Ok(doc) => {
-                let size = doc
-                    .page_size(PageIndex(0))
-                    .map(|page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt))
-                    .unwrap_or_else(|_| "unknown".to_owned());
+        Ok(format!(
+            "PDF loaded: {} pages. Page 1 size: {} points.",
+            doc.page_count(),
+            size
+        ))
+    }
 
-                format!(
-                    "PDF loaded: {} pages. Page 1 size: {} points.",
-                    doc.page_count(),
-                    size
-                )
+    fn load_bytes(&mut self, bytes: Vec<u8>) {
+        match self.viewer.load_bytes(bytes.clone()) {
+            Ok(()) => {
+                self.debug_info = Some(
+                    Self::describe_pdf(&bytes)
+                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
+                );
+                self.load_state = DemoLoadState::Loaded;
             }
-            Err(err) => format!("Error loading PDF: {err}"),
+            Err(err) => {
+                self.debug_info = None;
+                self.load_state = DemoLoadState::Failed {
+                    msg: err.to_string(),
+                };
+            }
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn open_file(&mut self) {
+        self.load_state = DemoLoadState::AcquiringBytes {
+            label: "Opening file…".to_owned(),
+        };
+
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("PDF", &["pdf"])
+            .pick_file()
+        else {
+            self.load_state = DemoLoadState::Idle;
+            return;
+        };
+
+        self.load_state = DemoLoadState::AcquiringBytes {
+            label: format!("Reading {}", path.display()),
+        };
+
+        match std::fs::read(&path) {
+            Ok(bytes) => self.load_bytes(bytes),
+            Err(err) => {
+                self.debug_info = None;
+                self.viewer.clear();
+                self.load_state = DemoLoadState::Failed {
+                    msg: format!("Failed to read {}: {err}", path.display()),
+                };
+            }
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn start_fetch(&mut self, ctx: &egui::Context, url: String) {
+        let pending = Arc::new(Mutex::new(None));
+        let pending_clone = Arc::clone(&pending);
+        let repaint_ctx = ctx.clone();
+
+        self.load_state = DemoLoadState::AcquiringBytes {
+            label: format!("Fetching {url}"),
+        };
+
+        ehttp::fetch(ehttp::Request::get(&url), move |result| {
+            let bytes = result.map(|response| response.bytes).map_err(|err| err.to_string());
+            *pending_clone.lock().unwrap() = Some(bytes);
+            repaint_ctx.request_repaint();
+        });
+
+        self.pending_bytes = Some(pending);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn poll_pending_bytes(&mut self) {
+        if let Some(pending) = self.pending_bytes.as_ref().map(Arc::clone) {
+            if let Ok(mut guard) = pending.try_lock() {
+                if let Some(result) = guard.take() {
+                    self.pending_bytes = None;
+                    match result {
+                        Ok(bytes) => self.load_bytes(bytes),
+                        Err(msg) => {
+                            self.debug_info = None;
+                            self.viewer.clear();
+                            self.load_state = DemoLoadState::Failed { msg };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn maybe_load_from_drop(&mut self, ui: &egui::Ui) {
+        let dropped_files = ui.input(|input| input.raw.dropped_files.clone());
+
+        for file in dropped_files {
+            if let Some(bytes) = file.bytes {
+                self.load_bytes(bytes.to_vec());
+                break;
+            }
+        }
+    }
+
+    fn dismiss_error(&mut self) {
+        self.viewer.clear();
+        self.debug_info = None;
+        self.load_state = DemoLoadState::Idle;
+    }
+
+    fn show_loading(ui: &mut egui::Ui, label: &str) {
+        ui.centered_and_justified(|ui| {
+            ui.vertical_centered(|ui| {
+                ui.add(egui::Spinner::new());
+                ui.add_space(8.0);
+                ui.label(label);
+            });
+        });
+    }
+
+    fn show_failure(&mut self, ui: &mut egui::Ui, msg: &str) {
+        ui.centered_and_justified(|ui| {
+            ui.vertical_centered(|ui| {
+                ui.label(egui::RichText::new(msg).color(egui::Color32::RED));
+                ui.add_space(8.0);
+                if ui.button("Dismiss").clicked() {
+                    self.dismiss_error();
+                }
+            });
+        });
     }
 }
 
 impl eframe::App for DemoApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        #[cfg(target_arch = "wasm32")]
+        self.poll_pending_bytes();
+
+        egui::Panel::top("demo_controls").show_inside(ui, |ui| {
+            #[cfg(not(target_arch = "wasm32"))]
+            ui.horizontal(|ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open…").clicked() {
+                        ui.close();
+                        self.open_file();
+                    }
+                });
+            });
+
+            #[cfg(target_arch = "wasm32")]
+            ui.horizontal(|ui| {
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.url_input)
+                        .hint_text("https://example.com/document.pdf")
+                        .desired_width(f32::INFINITY),
+                );
+                let should_load = ui.button("Load").clicked()
+                    || (response.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter)));
+
+                if should_load {
+                    let url = self.url_input.trim().to_owned();
+                    if url.is_empty() {
+                        self.viewer.clear();
+                        self.debug_info = None;
+                        self.load_state = DemoLoadState::Failed {
+                            msg: "Enter a PDF URL before loading.".to_owned(),
+                        };
+                    } else {
+                        self.start_fetch(ui.ctx(), url);
+                    }
+                }
+            });
+        });
+
+        egui::Panel::bottom("demo_debug")
+            .resizable(true)
+            .show_inside(ui, |ui| {
+                egui::CollapsingHeader::new("Debug")
+                    .default_open(false)
+                    .show(ui, |ui| {
+                        if let Some(info) = &self.debug_info {
+                            ui.label(info);
+                        } else {
+                            ui.label("No document loaded");
+                        }
+                    });
+            });
+
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.heading("viewkai demo");
-            ui.label(&self.info);
+            #[cfg(target_arch = "wasm32")]
+            self.maybe_load_from_drop(ui);
+
+            match &self.load_state {
+                DemoLoadState::AcquiringBytes { label } => Self::show_loading(ui, label),
+                DemoLoadState::Failed { msg } => {
+                    let msg = msg.clone();
+                    self.show_failure(ui, &msg);
+                }
+                DemoLoadState::Idle | DemoLoadState::Loaded => self.viewer.show(ui),
+            }
         });
     }
 }
