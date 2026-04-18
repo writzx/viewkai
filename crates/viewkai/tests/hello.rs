@@ -1,5 +1,6 @@
 use viewkai::Viewer;
 
+#[allow(deprecated)]
 fn run_headless_frame(viewer: &mut Viewer) {
     let ctx = egui::Context::default();
     let raw_input = egui::RawInput::default();
