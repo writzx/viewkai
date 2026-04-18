@@ -1,0 +1,12 @@
+[package]
+name = "viewkai-engine"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "PDFium rendering engine for viewkai"
+
+[dependencies]
+viewkai-core = { path = "../viewkai-core" }
+pdfium-render = { workspace = true, features = ["runtime-binding"] }
