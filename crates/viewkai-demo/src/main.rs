@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use viewkai::Viewer;
+use viewkai::{Viewer, zoom::ZoomState};
 use viewkai_core::page::PageIndex;
 use viewkai_engine::{Document, init};
+
+const DISCRETE_LEVELS: [f32; 9] = [0.25, 0.50, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
 
 #[cfg(target_arch = "wasm32")]
 use std::sync::{Arc, Mutex};
@@ -138,6 +140,9 @@ struct DemoApp {
     #[cfg(target_arch = "wasm32")]
     url_input: String,
     debug_info: Option<String>,
+    page_input: String,
+    page_input_focused: bool,
+    total_pages: usize,
     #[cfg(target_arch = "wasm32")]
     pending_bytes: Option<Arc<Mutex<Option<Result<Vec<u8>, String>>>>>,
 }
@@ -150,6 +155,9 @@ impl DemoApp {
             #[cfg(target_arch = "wasm32")]
             url_input: String::new(),
             debug_info: None,
+            page_input: String::new(),
+            page_input_focused: false,
+            total_pages: 0,
             #[cfg(target_arch = "wasm32")]
             pending_bytes: None,
         }
@@ -172,6 +180,12 @@ impl DemoApp {
     fn load_bytes(&mut self, bytes: Vec<u8>) {
         match self.viewer.load_bytes(bytes.clone()) {
             Ok(()) => {
+                self.total_pages = self.viewer.page_count();
+                self.page_input = if self.total_pages > 0 {
+                    "1".to_owned()
+                } else {
+                    String::new()
+                };
                 self.debug_info = Some(
                     Self::describe_pdf(&bytes)
                         .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
@@ -180,6 +194,8 @@ impl DemoApp {
             }
             Err(err) => {
                 self.debug_info = None;
+                self.total_pages = 0;
+                self.page_input.clear();
                 self.load_state = DemoLoadState::Failed {
                     msg: err.to_string(),
                 };
@@ -270,6 +286,8 @@ impl DemoApp {
     fn dismiss_error(&mut self) {
         self.viewer.clear();
         self.debug_info = None;
+        self.total_pages = 0;
+        self.page_input.clear();
         self.load_state = DemoLoadState::Idle;
     }
 
@@ -294,12 +312,55 @@ impl DemoApp {
             });
         });
     }
+
+    fn apply_zoom_factor(&mut self, factor: f32) {
+        let current = match self.viewer.zoom() {
+            ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
+            ZoomState::FitWidth | ZoomState::FitPage => 1.0,
+        };
+        self.viewer
+            .set_zoom(ZoomState::Custom((current * factor).clamp(0.1, 8.0)));
+    }
+
+    fn jump_to_page_input(&mut self) {
+        if let Ok(page_num) = self.page_input.trim().parse::<usize>()
+            && page_num >= 1
+            && page_num <= self.total_pages
+        {
+            self.viewer.scroll_to_page(page_num - 1);
+        }
+    }
 }
 
 impl eframe::App for DemoApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         #[cfg(target_arch = "wasm32")]
         self.poll_pending_bytes();
+
+        ui.input(|i| {
+            if i.modifiers.ctrl {
+                if i.key_pressed(egui::Key::Num0) {
+                    self.viewer.set_zoom(ZoomState::Discrete(1.0));
+                }
+                if i.key_pressed(egui::Key::Num1) {
+                    self.viewer.set_zoom(ZoomState::FitWidth);
+                }
+                if i.key_pressed(egui::Key::Num2) {
+                    self.viewer.set_zoom(ZoomState::FitPage);
+                }
+                if i.key_pressed(egui::Key::Plus) || i.key_pressed(egui::Key::Equals) {
+                    let z = step_zoom_up(self.viewer.zoom());
+                    self.viewer.set_zoom(z);
+                }
+                if i.key_pressed(egui::Key::Minus) {
+                    let z = step_zoom_down(self.viewer.zoom());
+                    self.viewer.set_zoom(z);
+                }
+                if i.key_pressed(egui::Key::G) {
+                    self.page_input_focused = true;
+                }
+            }
+        });
 
         egui::Panel::top("demo_controls").show_inside(ui, |ui| {
             #[cfg(not(target_arch = "wasm32"))]
@@ -310,6 +371,29 @@ impl eframe::App for DemoApp {
                         self.open_file();
                     }
                 });
+
+                ui.separator();
+
+                if ui.button("−").clicked() {
+                    let new_zoom = step_zoom_down(self.viewer.zoom());
+                    self.viewer.set_zoom(new_zoom);
+                }
+
+                let current_label = zoom_label(self.viewer.zoom());
+                egui::ComboBox::from_id_salt("zoom_combo")
+                    .selected_text(current_label)
+                    .show_ui(ui, |ui| {
+                        for (label, zoom) in zoom_levels() {
+                            if ui.selectable_label(false, label).clicked() {
+                                self.viewer.set_zoom(zoom);
+                            }
+                        }
+                    });
+
+                if ui.button("+").clicked() {
+                    let new_zoom = step_zoom_up(self.viewer.zoom());
+                    self.viewer.set_zoom(new_zoom);
+                }
             });
 
             #[cfg(target_arch = "wasm32")]
@@ -334,6 +418,49 @@ impl eframe::App for DemoApp {
                         self.start_fetch(ui.ctx(), url);
                     }
                 }
+
+                ui.separator();
+
+                if ui.button("−").clicked() {
+                    let new_zoom = step_zoom_down(self.viewer.zoom());
+                    self.viewer.set_zoom(new_zoom);
+                }
+
+                let current_label = zoom_label(self.viewer.zoom());
+                egui::ComboBox::from_id_salt("zoom_combo")
+                    .selected_text(current_label)
+                    .show_ui(ui, |ui| {
+                        for (label, zoom) in zoom_levels() {
+                            if ui.selectable_label(false, label).clicked() {
+                                self.viewer.set_zoom(zoom);
+                            }
+                        }
+                    });
+
+                if ui.button("+").clicked() {
+                    let new_zoom = step_zoom_up(self.viewer.zoom());
+                    self.viewer.set_zoom(new_zoom);
+                }
+            });
+        });
+
+        egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Page:");
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.page_input)
+                        .desired_width(50.0)
+                        .hint_text("1"),
+                );
+                if self.page_input_focused {
+                    response.request_focus();
+                    self.page_input_focused = false;
+                }
+                ui.label(format!("of {}", self.total_pages));
+
+                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    self.jump_to_page_input();
+                }
             });
         });
 
@@ -355,6 +482,24 @@ impl eframe::App for DemoApp {
             #[cfg(target_arch = "wasm32")]
             self.maybe_load_from_drop(ui);
 
+            let scroll_delta = ui.input(|i| {
+                if i.modifiers.ctrl {
+                    i.smooth_scroll_delta.y
+                } else {
+                    0.0
+                }
+            });
+
+            if scroll_delta.abs() > 0.1 {
+                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
+                self.apply_zoom_factor(factor);
+            }
+
+            let pinch_delta = ui.input(|i| i.zoom_delta());
+            if (pinch_delta - 1.0).abs() > 0.01 {
+                self.apply_zoom_factor(pinch_delta);
+            }
+
             match &self.load_state {
                 DemoLoadState::AcquiringBytes { label } => Self::show_loading(ui, label),
                 DemoLoadState::Failed { msg } => {
@@ -365,4 +510,59 @@ impl eframe::App for DemoApp {
             }
         });
     }
+}
+
+fn zoom_levels() -> [(&'static str, ZoomState); 11] {
+    [
+        ("25%", ZoomState::Discrete(0.25)),
+        ("50%", ZoomState::Discrete(0.50)),
+        ("75%", ZoomState::Discrete(0.75)),
+        ("100%", ZoomState::Discrete(1.0)),
+        ("125%", ZoomState::Discrete(1.25)),
+        ("150%", ZoomState::Discrete(1.50)),
+        ("200%", ZoomState::Discrete(2.0)),
+        ("300%", ZoomState::Discrete(3.0)),
+        ("400%", ZoomState::Discrete(4.0)),
+        ("Fit Width", ZoomState::FitWidth),
+        ("Fit Page", ZoomState::FitPage),
+    ]
+}
+
+fn zoom_label(zoom: ZoomState) -> &'static str {
+    match zoom {
+        ZoomState::Discrete(z) if (z - 0.25).abs() < 0.01 => "25%",
+        ZoomState::Discrete(z) if (z - 0.50).abs() < 0.01 => "50%",
+        ZoomState::Discrete(z) if (z - 0.75).abs() < 0.01 => "75%",
+        ZoomState::Discrete(z) if (z - 1.0).abs() < 0.01 => "100%",
+        ZoomState::Discrete(z) if (z - 1.25).abs() < 0.01 => "125%",
+        ZoomState::Discrete(z) if (z - 1.5).abs() < 0.01 => "150%",
+        ZoomState::Discrete(z) if (z - 2.0).abs() < 0.01 => "200%",
+        ZoomState::Discrete(z) if (z - 3.0).abs() < 0.01 => "300%",
+        ZoomState::Discrete(z) if (z - 4.0).abs() < 0.01 => "400%",
+        ZoomState::FitWidth => "Fit Width",
+        ZoomState::FitPage => "Fit Page",
+        _ => "Custom",
+    }
+}
+
+fn step_zoom_up(current: ZoomState) -> ZoomState {
+    let z = match current {
+        ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
+        ZoomState::FitWidth | ZoomState::FitPage => 1.0,
+    };
+    let next = DISCRETE_LEVELS.iter().find(|&&level| level > z + 0.01).copied();
+    ZoomState::Discrete(next.unwrap_or(4.0))
+}
+
+fn step_zoom_down(current: ZoomState) -> ZoomState {
+    let z = match current {
+        ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
+        ZoomState::FitWidth | ZoomState::FitPage => 1.0,
+    };
+    let previous = DISCRETE_LEVELS
+        .iter()
+        .rev()
+        .find(|&&level| level < z - 0.01)
+        .copied();
+    ZoomState::Discrete(previous.unwrap_or(0.25))
 }

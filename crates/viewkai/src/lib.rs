@@ -50,6 +50,7 @@ pub struct Viewer {
     cache: TextureCache,
     visibility: VisibilityTracker,
     zoom: ZoomState,
+    pending_scroll_to_page: Option<usize>,
 }
 
 impl Default for Viewer {
@@ -66,6 +67,7 @@ impl Viewer {
             cache: TextureCache::default_budget(),
             visibility: VisibilityTracker::new(2),
             zoom: ZoomState::default(),
+            pending_scroll_to_page: None,
         }
     }
 
@@ -75,6 +77,13 @@ impl Viewer {
 
     pub fn zoom(&self) -> ZoomState {
         self.zoom
+    }
+
+    /// Scroll the viewer to make page `idx` visible.
+    ///
+    /// This sets a pending scroll target that is applied on the next `show()` call.
+    pub fn scroll_to_page(&mut self, idx: usize) {
+        self.pending_scroll_to_page = Some(idx);
     }
 
     /// Load a PDF from raw bytes.
@@ -103,6 +112,7 @@ impl Viewer {
                     .collect();
 
                 self.cache.clear();
+                self.pending_scroll_to_page = None;
                 self.state = ViewerState::Loaded {
                     document: Arc::new(doc),
                     pages,
@@ -121,6 +131,7 @@ impl Viewer {
     pub fn clear(&mut self) {
         self.state = ViewerState::Empty;
         self.cache.clear();
+        self.pending_scroll_to_page = None;
     }
 
     /// Returns the number of pages in the loaded document, or 0 if no document is loaded.
@@ -168,7 +179,15 @@ impl Viewer {
                 });
             }
             ViewerState::Loaded { document, pages } => {
-                Self::show_pages(ui, document, pages, &mut self.cache, &self.visibility, self.zoom);
+                Self::show_pages(
+                    ui,
+                    document,
+                    pages,
+                    &mut self.cache,
+                    &self.visibility,
+                    self.zoom,
+                    &mut self.pending_scroll_to_page,
+                );
             }
         }
 
@@ -184,6 +203,7 @@ impl Viewer {
         cache: &mut TextureCache,
         visibility: &VisibilityTracker,
         zoom: ZoomState,
+        viewer_pending_scroll: &mut Option<usize>,
     ) {
         const GAP: f32 = 16.0;
         const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
@@ -214,6 +234,15 @@ impl Viewer {
                 for page in pages {
                     page_tops.push(cumulative_y);
                     cumulative_y += page.size_pt.y * effective_zoom + GAP;
+                }
+
+                if let Some(target_idx) = viewer_pending_scroll.take() {
+                    if let Some(&top) = page_tops.get(target_idx) {
+                        ui.scroll_to_rect(
+                            Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
+                            Some(egui::Align::TOP),
+                        );
+                    }
                 }
 
                 let page_heights: Vec<f32> = pages
