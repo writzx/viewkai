@@ -3,6 +3,7 @@ pub const NAME: &str = "viewkai-core";
 pub mod coord;
 pub mod error;
 pub mod page;
+pub mod render;
 
 #[cfg(test)]
 mod tests {

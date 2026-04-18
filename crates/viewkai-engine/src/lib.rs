@@ -20,6 +20,7 @@ use std::sync::{Mutex, OnceLock};
 use viewkai_core::{
     error::{Error, Result},
     page::{PageIndex, PageSize},
+    render::RawImage,
 };
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────
@@ -172,4 +173,46 @@ impl Document {
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
+}
+
+/// Render a single page to an RGBA image at the given DPI.
+///
+/// Opens the document from its stored bytes, renders the page, and returns
+/// the raw RGBA pixel buffer. The document is re-opened each call; for
+/// repeated rendering, the caller should cache the result.
+///
+/// # Errors
+///
+/// Returns [`Error::NotLoaded`] if [`init()`] has not been called.
+/// Returns [`Error::PageOutOfRange`] if `idx >= doc.page_count()`.
+pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
+    let pdfium = PDFIUM.get().ok_or(Error::NotLoaded)?;
+
+    let pdf_doc = pdfium
+        .load_pdf_from_byte_slice(doc.bytes(), None)
+        .map_err(|e| Error::Pdfium(e.to_string()))?;
+
+    let page = pdf_doc
+        .pages()
+        .get(idx.0 as PdfPageIndex)
+        .map_err(|e| match e {
+            PdfiumError::PageIndexOutOfBounds => Error::PageOutOfRange(idx.0),
+            _ => Error::Pdfium(e.to_string()),
+        })?;
+
+    let scale = dpi as f32 / 72.0;
+    let width = (page.width().value * scale).round() as Pixels;
+    let height = (page.height().value * scale).round() as Pixels;
+
+    let bitmap = page
+        .render(width, height, None)
+        .map_err(|e| Error::Pdfium(e.to_string()))?;
+
+    let pixels = bitmap.as_rgba_bytes();
+
+    Ok(RawImage {
+        width: width as u32,
+        height: height as u32,
+        pixels,
+    })
 }
