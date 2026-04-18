@@ -11,6 +11,10 @@
 //! // viewer.show(ui);
 //! ```
 
+pub mod cache;
+pub mod viewport;
+pub mod zoom;
+
 pub const NAME: &str = "viewkai";
 
 use egui::{Color32, Rect, Sense, TextureHandle, TextureOptions, Vec2};
