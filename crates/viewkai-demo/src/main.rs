@@ -4,11 +4,9 @@ use eframe::egui;
 struct DemoApp;
 
 impl eframe::App for DemoApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("viewkai-demo");
-            ui.label(format!("Loaded {}", viewkai::NAME));
-        });
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        ui.heading("viewkai-demo");
+        ui.label(format!("Loaded {}", viewkai::NAME));
     }
 }
 
