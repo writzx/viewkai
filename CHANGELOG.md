@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.2] — 2026-04-18 — Hello Viewer
+
+### Added
+- `viewkai::Viewer` widget: `new()`, `load_bytes()`, `clear()`, `show()` with `PageState`
+- Vertical-stack layout with 16px gaps and horizontal centering
+- Lazy rasterization: pages rendered on first visibility at 100 DPI
+- Empty state ("No document loaded"), error state (error + Retry button)
+- `viewkai-engine::render_page()` function returning `RawImage` (RGBA)
+- `viewkai-core::RawImage` type
+- `viewkai-demo`: `DemoLoadState` machine with native file dialog (rfd), web URL fetch (ehttp), drag-and-drop
+- Integration test `crates/viewkai/tests/hello.rs` (headless egui, no eframe)
+
 ## [0.0.1] — 2026-04-18 — Toolchain PoC
 
 ### Added
