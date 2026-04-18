@@ -1,0 +1,25 @@
+# Snapshot storage — relative to each crate's root at test time.
+# For viewkai: crates/viewkai/tests/snapshots
+# For viewkai-demo: crates/viewkai-demo/tests/snapshots
+output_path = "tests/snapshots"
+
+# Baseline threshold applies as fallback for any OS without an override.
+# Higher threshold = more lenient (developer iteration).
+threshold = 2.0
+failed_pixel_count_threshold = 0
+
+# CI source of truth. Keep tight; baselines are authored via CI.
+[linux]
+threshold = 0.6
+failed_pixel_count_threshold = 0
+
+# macOS dev override — lenient because font hinting / Metal driver variance
+# is expected vs. the Linux-generated baselines.
+[mac]
+threshold = 2.0
+failed_pixel_count_threshold = 0
+
+# Windows defensive entry.
+[windows]
+threshold = 2.0
+failed_pixel_count_threshold = 0

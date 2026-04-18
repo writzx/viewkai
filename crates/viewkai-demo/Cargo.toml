@@ -1,6 +1,6 @@
 [package]
 name = "viewkai-demo"
-version = "0.0.3"
+version = "0.0.4"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -27,3 +27,6 @@ js-sys = "0.3"
 wasm-bindgen = { version = "0.2", features = ["enable-interning"] }
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "console"] }
+
+[dev-dependencies]
+egui_kittest = { version = "0.34", features = ["wgpu", "snapshot", "eframe"] }

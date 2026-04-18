@@ -45,6 +45,11 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 10 "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7789/pdfium-linux-x64.tgz" -o /tmp/pdfium.tgz
           tar xzf /tmp/pdfium.tgz -C /tmp lib/
           echo "PDFIUM_DYLIB_PATH=/tmp/lib/libpdfium.so" >> $GITHUB_ENV
+      - name: Install Vulkan/lavapipe for egui_kittest wgpu renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers vulkan-tools
+          vulkaninfo --summary || true
       - run: cargo test --workspace
 
   build-wasm:

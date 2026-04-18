@@ -1,6 +1,6 @@
 [package]
 name = "viewkai"
-version = "0.0.3"
+version = "0.0.4"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -15,6 +15,7 @@ egui = { workspace = true }
 [dev-dependencies]
 viewkai-engine = { path = "../viewkai-engine" }
 criterion = { version = "0.5", features = ["html_reports"] }
+egui_kittest = { version = "0.34", features = ["wgpu", "snapshot", "eframe"] }
 
 [[bench]]
 name = "large_doc"

@@ -6,3 +6,8 @@ node_modules/
 dist/
 pkg/
 vendor/pdfium/
+
+# egui_kittest snapshot scratch files (always local-only)
+**/tests/snapshots/**/*.new.png
+**/tests/snapshots/**/*.diff.png
+**/tests/snapshots/**/*.old.png
