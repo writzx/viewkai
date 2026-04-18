@@ -39,6 +39,10 @@ jobs:
           if git diff --staged --quiet; then
             echo "No snapshot changes to commit."
           else
+            BRANCH="chore/update-snapshots-$(date +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             git commit -m "chore(snapshots): regenerate baselines from Linux/lavapipe CI"
-            git push
+            git push origin "$BRANCH"
+            echo "Pushed to branch: $BRANCH"
+            echo "Merge this branch into main to update the snapshot baselines."
           fi
