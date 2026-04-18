@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>viewkai demo</title>
+    <style>
+      html, body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+    <link data-trunk rel="copy-file" href="../../public/pdfium.js" />
+    <link data-trunk rel="copy-file" href="../../public/pdfium.wasm" />
+  </head>
+  <body>
+    <!-- Keep this in sync with public/index.html for local web hosting. -->
+    <script src="pdfium.js"></script>
+    <script>
+      window.__pdfiumModule = null;
+      PDFiumModule().then((m) => {
+        window.__pdfiumModule = m;
+      });
+    </script>
+    <link data-trunk rel="rust" />
+    <canvas id="the_canvas_id"></canvas>
+  </body>
+</html>

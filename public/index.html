@@ -10,18 +10,27 @@
     </style>
   </head>
   <body>
-    <!-- PDFium WASM: factory-function pattern. Must load before app WASM. -->
+    <!-- 
+      PDFium WASM init ceremony.
+      pdfium-render requires initialize_pdfium_render(pdfiumModule, localModule, debug) to be called
+      from JavaScript before any pdfium-render Rust code runs.
+      
+      Step 1: pdfium.js loads (factory-function pattern, exported as PDFiumModule).
+      Step 2: PDFiumModule() promise stores the resolved module at window.__pdfiumModule.
+      Step 3: trunk injects the eframe WASM bundle via the <link data-trunk rel="rust"> below.
+      Step 4: The WASM startup code (wasm_start) awaits window.__pdfiumModule, then calls
+              initialize_pdfium_render(window.__pdfiumModule, wasm_bindgen.__wbindgen_get_module(), false).
+    -->
     <script src="pdfium.js"></script>
     <script>
-      // Initialise PDFium and make the module available globally.
-      // viewkai-demo's eframe WASM starts after this promise resolves
-      // so pdfium-render finds PDFium bindings already in place.
-      PDFiumModule().then(function (m) {
-        window.Module = m;
-        window.pdfiumReady = true;
+      // Initialize PDFium WASM and make module available globally.
+      window.__pdfiumModule = null;
+      PDFiumModule().then((m) => {
+        window.__pdfiumModule = m;
       });
     </script>
     <!-- trunk injects the compiled eframe WASM bundle here -->
     <link data-trunk rel="rust" />
+    <canvas id="the_canvas_id"></canvas>
   </body>
 </html>

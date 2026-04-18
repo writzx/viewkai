@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../dist/viewkai-demo"
+public_url = "./"
+
+[watch]
+ignore = ["../../target"]
