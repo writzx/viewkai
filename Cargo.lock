@@ -3632,7 +3632,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "viewkai"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "criterion",
  "egui",
@@ -3642,7 +3642,7 @@ dependencies = [
 
 [[package]]
 name = "viewkai-core"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -3651,7 +3651,7 @@ dependencies = [
 
 [[package]]
 name = "viewkai-demo"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "eframe",
  "ehttp",
@@ -3668,7 +3668,7 @@ dependencies = [
 
 [[package]]
 name = "viewkai-engine"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "pdfium-render",
  "serde_json",
