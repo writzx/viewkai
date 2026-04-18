@@ -142,6 +142,11 @@ impl Viewer {
         }
     }
 
+    /// Returns the total bytes currently held in the texture cache.
+    pub fn cache_bytes(&self) -> usize {
+        self.cache.total_bytes()
+    }
+
     /// Returns the page size in PDF points for the given index, if loaded.
     pub fn page_size_pt(&self, idx: usize) -> Option<Vec2> {
         match &self.state {
