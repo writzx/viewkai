@@ -11,6 +11,13 @@
 cargo test --workspace
 ```
 
+## Testing guide
+
+See [docs/testing.md](docs/testing.md) for the full testing guide, including:
+- Test levels (L1a unit, L1b widget, L1c snapshot, L1d demo integration)
+- How to update snapshot baselines
+- How to add new demo tests
+
 ## Build WASM
 
 ```bash
