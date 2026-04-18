@@ -1,16 +1,5 @@
+use egui_kittest::Harness;
 use viewkai::Viewer;
-
-#[allow(deprecated)]
-fn run_headless_frame(viewer: &mut Viewer) {
-    let ctx = egui::Context::default();
-    let raw_input = egui::RawInput::default();
-
-    let _ = ctx.run(raw_input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            viewer.show(ui);
-        });
-    });
-}
 
 #[test]
 fn viewer_loads_hello_pdf() {
@@ -20,8 +9,12 @@ fn viewer_loads_hello_pdf() {
     let mut viewer = Viewer::new();
     viewer.load_bytes(bytes).expect("should open hello.pdf");
 
-    run_headless_frame(&mut viewer);
+    let mut harness = Harness::new_ui_state(|ui, viewer| {
+        viewer.show(ui);
+    }, viewer);
+    harness.run_ok();
 
+    let viewer = harness.state();
     assert_eq!(viewer.page_count(), 1, "hello.pdf should expose one page");
 
     let size = viewer.page_size_pt(0).expect("page 0 should exist");

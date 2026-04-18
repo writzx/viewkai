@@ -1,20 +1,6 @@
-use egui::{Pos2, RawInput, Rect, Vec2};
+use egui::Vec2;
+use egui_kittest::Harness;
 use viewkai::Viewer;
-
-#[allow(deprecated)]
-fn run_headless_frame(viewer: &mut Viewer) {
-    let ctx = egui::Context::default();
-    let raw_input = RawInput {
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1280.0, 900.0))),
-        ..Default::default()
-    };
-
-    let _ = ctx.run(raw_input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            viewer.show(ui);
-        });
-    });
-}
 
 #[test]
 fn memory_budget_acceptance() {
@@ -30,12 +16,17 @@ fn memory_budget_acceptance() {
     let budget = 256 * 1024 * 1024;
     let mut peak_bytes = 0usize;
 
-    for page_idx in 0..page_count {
-        viewer.scroll_to_page(page_idx);
-        run_headless_frame(&mut viewer);
-        run_headless_frame(&mut viewer);
+    let mut harness = Harness::builder()
+        .with_size(Vec2::new(1280.0, 900.0))
+        .build_ui_state(|ui, viewer| {
+            viewer.show(ui);
+        }, viewer);
 
-        let current = viewer.cache_bytes();
+    for page_idx in 0..page_count {
+        harness.state_mut().scroll_to_page(page_idx);
+        harness.run_steps(2);
+
+        let current = harness.state().cache_bytes();
         peak_bytes = peak_bytes.max(current);
 
         assert!(
