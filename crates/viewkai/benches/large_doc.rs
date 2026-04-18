@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use viewkai_core::page::PageIndex;
 
 fn bench_parse_500_page_doc(c: &mut Criterion) {
@@ -21,12 +21,16 @@ fn bench_rasterize_page_at_150dpi(c: &mut Criterion) {
 
     c.bench_function("rasterize_page_at_150dpi", |b| {
         b.iter(|| {
-            let raw = viewkai_engine::render_page(&doc, PageIndex(0), 150)
-                .expect("should render page");
+            let raw =
+                viewkai_engine::render_page(&doc, PageIndex(0), 150).expect("should render page");
             criterion::black_box(raw.pixels.len())
         })
     });
 }
 
-criterion_group!(benches, bench_parse_500_page_doc, bench_rasterize_page_at_150dpi);
+criterion_group!(
+    benches,
+    bench_parse_500_page_doc,
+    bench_rasterize_page_at_150dpi
+);
 criterion_main!(benches);

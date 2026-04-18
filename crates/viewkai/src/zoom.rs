@@ -74,7 +74,10 @@ impl ZoomState {
     pub fn dpi_to_bucket_index(dpi: u32) -> u8 {
         const BUCKETS: [u32; 6] = [72, 96, 144, 216, 288, 432];
 
-        BUCKETS.iter().position(|&bucket| bucket == dpi).unwrap_or(0) as u8
+        BUCKETS
+            .iter()
+            .position(|&bucket| bucket == dpi)
+            .unwrap_or(0) as u8
     }
 }
 

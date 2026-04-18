@@ -5,10 +5,7 @@ use viewkai::Viewer;
 fn run_headless_frame(viewer: &mut Viewer) {
     let ctx = egui::Context::default();
     let raw_input = RawInput {
-        screen_rect: Some(Rect::from_min_size(
-            Pos2::ZERO,
-            Vec2::new(1280.0, 900.0),
-        )),
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1280.0, 900.0))),
         ..Default::default()
     };
 

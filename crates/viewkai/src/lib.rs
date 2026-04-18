@@ -275,7 +275,8 @@ impl Viewer {
                     .map(|(i, _)| i)
                     .unwrap_or(0);
 
-                let mut to_render: Vec<usize> = vis_set.all_to_render().map(|page| page.0).collect();
+                let mut to_render: Vec<usize> =
+                    vis_set.all_to_render().map(|page| page.0).collect();
                 to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
 
                 for &idx in &to_render {
@@ -285,7 +286,8 @@ impl Viewer {
                     };
 
                     if cache.get(&key, now).is_none() {
-                        if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi) {
+                        if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi)
+                        {
                             let byte_size = raw.pixels.len();
                             let image = egui::ColorImage::from_rgba_unmultiplied(
                                 [raw.width as usize, raw.height as usize],
@@ -311,10 +313,8 @@ impl Viewer {
                         Vec2::new(available_width, display_size.y + GAP),
                         Sense::hover(),
                     );
-                    let page_rect = Rect::from_min_size(
-                        row_rect.min + Vec2::new(x_offset, 0.0),
-                        display_size,
-                    );
+                    let page_rect =
+                        Rect::from_min_size(row_rect.min + Vec2::new(x_offset, 0.0), display_size);
 
                     let key = CacheKey {
                         page_idx: PageIndex(idx),
@@ -341,10 +341,7 @@ impl Viewer {
                             ui.painter().image(
                                 tex_id,
                                 page_rect,
-                                Rect::from_min_max(
-                                    egui::pos2(0.0, 0.0),
-                                    egui::pos2(1.0, 1.0),
-                                ),
+                                Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                                 Color32::WHITE,
                             );
                         } else {

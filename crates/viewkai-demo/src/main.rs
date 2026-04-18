@@ -186,10 +186,10 @@ impl DemoApp {
                 } else {
                     String::new()
                 };
-                self.debug_info = Some(
-                    Self::describe_pdf(&bytes)
-                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
-                );
+                self.debug_info =
+                    Some(Self::describe_pdf(&bytes).unwrap_or_else(|err| {
+                        format!("PDF loaded; debug info unavailable: {err}")
+                    }));
                 self.load_state = DemoLoadState::Loaded;
             }
             Err(err) => {
@@ -244,7 +244,9 @@ impl DemoApp {
         };
 
         ehttp::fetch(ehttp::Request::get(&url), move |result| {
-            let bytes = result.map(|response| response.bytes).map_err(|err| err.to_string());
+            let bytes = result
+                .map(|response| response.bytes)
+                .map_err(|err| err.to_string());
             *pending_clone.lock().unwrap() = Some(bytes);
             repaint_ctx.request_repaint();
         });
@@ -404,7 +406,8 @@ impl eframe::App for DemoApp {
                         .desired_width(f32::INFINITY),
                 );
                 let should_load = ui.button("Load").clicked()
-                    || (response.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter)));
+                    || (response.lost_focus()
+                        && ui.input(|input| input.key_pressed(egui::Key::Enter)));
 
                 if should_load {
                     let url = self.url_input.trim().to_owned();
@@ -491,7 +494,11 @@ impl eframe::App for DemoApp {
             });
 
             if scroll_delta.abs() > 0.1 {
-                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
+                let factor = if scroll_delta > 0.0 {
+                    1.1_f32
+                } else {
+                    1.0 / 1.1
+                };
                 self.apply_zoom_factor(factor);
             }
 
@@ -550,7 +557,10 @@ fn step_zoom_up(current: ZoomState) -> ZoomState {
         ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
         ZoomState::FitWidth | ZoomState::FitPage => 1.0,
     };
-    let next = DISCRETE_LEVELS.iter().find(|&&level| level > z + 0.01).copied();
+    let next = DISCRETE_LEVELS
+        .iter()
+        .find(|&&level| level > z + 0.01)
+        .copied();
     ZoomState::Discrete(next.unwrap_or(4.0))
 }
 
