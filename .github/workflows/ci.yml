@@ -72,7 +72,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Check viewkai has no eframe/tokio/reqwest
         run: |
-          cargo tree -p viewkai -e normal 2>&1 | grep -E "^(eframe|tokio|reqwest) " && exit 1 || exit 0
+          if cargo tree -p viewkai -e normal 2>&1 | grep -qE "\b(eframe|tokio|reqwest)\b"; then
+            echo "FAIL: eframe/tokio/reqwest found in viewkai dependency tree"
+            cargo tree -p viewkai -e normal 2>&1 | grep -E "\b(eframe|tokio|reqwest)\b"
+            exit 1
+          fi
 
   purity-engine:
     name: purity-engine
@@ -83,7 +87,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Check viewkai-engine has no egui/eframe
         run: |
-          cargo tree -p viewkai-engine -e normal 2>&1 | grep -E "^(egui|eframe) " && exit 1 || exit 0
+          if cargo tree -p viewkai-engine -e normal 2>&1 | grep -qE "\b(egui|eframe)\b"; then
+            echo "FAIL: egui/eframe found in viewkai-engine dependency tree"
+            cargo tree -p viewkai-engine -e normal 2>&1 | grep -E "\b(egui|eframe)\b"
+            exit 1
+          fi
 
   purity-core:
     name: purity-core
@@ -94,4 +102,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Check viewkai-core has no pdfium-render/egui/eframe
         run: |
-          cargo tree -p viewkai-core -e normal 2>&1 | grep -E "^(pdfium-render|egui|eframe) " && exit 1 || exit 0
+          if cargo tree -p viewkai-core -e normal 2>&1 | grep -qE "\b(pdfium-render|egui|eframe)\b"; then
+            echo "FAIL: pdfium-render/egui/eframe found in viewkai-core dependency tree"
+            cargo tree -p viewkai-core -e normal 2>&1 | grep -E "\b(pdfium-render|egui|eframe)\b"
+            exit 1
+          fi
