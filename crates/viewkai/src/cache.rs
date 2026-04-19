@@ -116,28 +116,24 @@ impl TextureCache {
             .map(|(key, _)| *key)
             .expect("entries checked non-empty above");
 
-        if let Some(entry) = self.entries.remove(&lru_key) {
-            self.total_bytes -= entry.byte_size;
-            true
-        } else {
-            false
-        }
+        let entry = self
+            .entries
+            .remove(&lru_key)
+            .expect("lru_key came from self.entries.iter() above; it must still be present");
+        self.total_bytes -= entry.byte_size;
+        true
     }
 
     /// Remove all entries for a given page index (all zoom buckets).
     pub fn evict_page(&mut self, page_idx: PageIndex) {
-        let keys: Vec<_> = self
-            .entries
-            .keys()
-            .filter(|key| key.page_idx == page_idx)
-            .copied()
-            .collect();
-
-        for key in keys {
-            if let Some(entry) = self.entries.remove(&key) {
+        self.entries.retain(|key, entry| {
+            if key.page_idx == page_idx {
                 self.total_bytes -= entry.byte_size;
+                false
+            } else {
+                true
             }
-        }
+        });
     }
 
     /// Clear all entries.

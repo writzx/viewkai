@@ -1,5 +1,8 @@
 //! Zoom state for viewkai.
 
+/// DPI rendering buckets used for zoom quantization.
+const BUCKETS: [u32; 6] = [72, 96, 144, 216, 288, 432];
+
 /// Zoom level for the viewer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ZoomState {
@@ -60,7 +63,6 @@ impl ZoomState {
     ///
     /// Buckets: [72, 96, 144, 216, 288, 432] DPI.
     pub fn zoom_to_dpi_bucket(zoom: f32) -> u32 {
-        const BUCKETS: [u32; 6] = [72, 96, 144, 216, 288, 432];
         let target_dpi = (zoom * 72.0).round() as u32;
 
         BUCKETS
@@ -72,8 +74,6 @@ impl ZoomState {
 
     /// Map a DPI value to a zoom bucket index (0-5).
     pub fn dpi_to_bucket_index(dpi: u32) -> u8 {
-        const BUCKETS: [u32; 6] = [72, 96, 144, 216, 288, 432];
-
         BUCKETS
             .iter()
             .position(|&bucket| bucket == dpi)

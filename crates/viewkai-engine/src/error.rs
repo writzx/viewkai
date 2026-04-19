@@ -12,7 +12,7 @@ use thiserror::Error;
 /// No variant carries a `pdfium_render::*` type. Known pdfium error cases are
 /// mapped to structured variants; unknown cases fall through to
 /// [`EngineError::Pdfium`] with a stringified message.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum EngineError {
     /// PDFium library not initialised; call [`crate::init()`] first.
     #[error("pdfium not initialised; call viewkai_engine::init() first")]

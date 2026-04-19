@@ -12,21 +12,20 @@
 //! ```
 
 pub mod cache;
+pub mod error;
 pub mod viewport;
 pub mod zoom;
 
 pub const NAME: &str = "viewkai";
 
 use crate::cache::{CacheKey, TextureCache};
-use crate::viewport::VisibilityTracker;
+use crate::error::LoadError;
+use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 use std::sync::Arc;
-use viewkai_core::{
-    error::{Error, Result},
-    page::PageIndex,
-};
-use viewkai_engine::Document;
+use viewkai_core::page::PageIndex;
+use viewkai_engine::{Document, error::EngineError};
 
 /// Per-page rendering state.
 pub struct PageState {
@@ -41,7 +40,27 @@ enum ViewerState {
         document: Arc<Document>,
         pages: Vec<PageState>,
     },
-    Error(String),
+    Error(LoadError),
+}
+
+/// Internal rendering state: texture cache, visibility tracking, and zoom.
+///
+/// Extracted from [`Viewer`] to narrow responsibilities per Rust API Guidelines
+/// C-STRUCT-PRIVATE.
+struct RenderState {
+    cache: TextureCache,
+    visibility: VisibilityTracker,
+    zoom: ZoomState,
+}
+
+impl RenderState {
+    fn new() -> Self {
+        Self {
+            cache: TextureCache::default_budget(),
+            visibility: VisibilityTracker::new(2),
+            zoom: ZoomState::default(),
+        }
+    }
 }
 
 /// An embeddable PDF viewer widget.
@@ -50,9 +69,7 @@ enum ViewerState {
 /// to render the widget into the provided [`egui::Ui`].
 pub struct Viewer {
     state: ViewerState,
-    cache: TextureCache,
-    visibility: VisibilityTracker,
-    zoom: ZoomState,
+    render: RenderState,
     pending_scroll_to_page: Option<usize>,
 }
 
@@ -67,19 +84,17 @@ impl Viewer {
     pub fn new() -> Self {
         Self {
             state: ViewerState::Empty,
-            cache: TextureCache::default_budget(),
-            visibility: VisibilityTracker::new(2),
-            zoom: ZoomState::default(),
+            render: RenderState::new(),
             pending_scroll_to_page: None,
         }
     }
 
     pub fn set_zoom(&mut self, zoom: ZoomState) {
-        self.zoom = zoom;
+        self.render.zoom = zoom;
     }
 
     pub fn zoom(&self) -> ZoomState {
-        self.zoom
+        self.render.zoom
     }
 
     /// Scroll the viewer to make page `idx` visible.
@@ -99,7 +114,7 @@ impl Viewer {
     /// Returns an error if the bytes cannot be parsed as a PDF, or if the
     /// PDFium engine has not been initialised (call [`viewkai_engine::init()`]
     /// first).
-    pub fn load_bytes(&mut self, bytes: Vec<u8>) -> Result<()> {
+    pub fn load_bytes(&mut self, bytes: Vec<u8>) -> Result<(), LoadError> {
         match Document::from_bytes(bytes) {
             Ok(doc) => {
                 let count = doc.page_count();
@@ -114,7 +129,7 @@ impl Viewer {
                     })
                     .collect();
 
-                self.cache.clear();
+                self.render.cache.clear();
                 self.pending_scroll_to_page = None;
                 self.state = ViewerState::Loaded {
                     document: Arc::new(doc),
@@ -124,9 +139,15 @@ impl Viewer {
                 Ok(())
             }
             Err(err) => {
-                let msg = err.to_string();
-                self.state = ViewerState::Error(msg.clone());
-                Err(Error::Engine(msg))
+                let load_err = match err {
+                    EngineError::InvalidPdf => LoadError::InvalidPdf {
+                        source: EngineError::InvalidPdf.to_string(),
+                    },
+                    EngineError::NotInitialised => LoadError::Uninitialised,
+                    other => LoadError::Engine(other),
+                };
+                self.state = ViewerState::Error(load_err.clone());
+                Err(load_err)
             }
         }
     }
@@ -134,7 +155,7 @@ impl Viewer {
     /// Drop the document and all textures, returning to the empty state.
     pub fn clear(&mut self) {
         self.state = ViewerState::Empty;
-        self.cache.clear();
+        self.render.cache.clear();
         self.pending_scroll_to_page = None;
     }
 
@@ -148,7 +169,7 @@ impl Viewer {
 
     /// Returns the total bytes currently held in the texture cache.
     pub fn cache_bytes(&self) -> usize {
-        self.cache.total_bytes()
+        self.render.cache.total_bytes()
     }
 
     /// Returns the page size in PDF points for the given index, if loaded.
@@ -174,8 +195,8 @@ impl Viewer {
                     ui.label("No document loaded");
                 });
             }
-            ViewerState::Error(message) => {
-                let message = message.clone();
+            ViewerState::Error(err) => {
+                let message = err.to_string();
 
                 ui.centered_and_justified(|ui| {
                     ui.vertical_centered(|ui| {
@@ -192,9 +213,9 @@ impl Viewer {
                     ui,
                     document,
                     pages,
-                    &mut self.cache,
-                    &self.visibility,
-                    self.zoom,
+                    &mut self.render.cache,
+                    &self.render.visibility,
+                    self.render.zoom,
                     &mut self.pending_scroll_to_page,
                 );
             }
@@ -214,9 +235,6 @@ impl Viewer {
         zoom: ZoomState,
         viewer_pending_scroll: &mut Option<usize>,
     ) {
-        const GAP: f32 = 16.0;
-        const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
-
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
@@ -238,26 +256,8 @@ impl Viewer {
                 let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
 
-                let mut page_tops = Vec::with_capacity(pages.len());
-                let mut cumulative_y = 0.0_f32;
-                for page in pages {
-                    page_tops.push(cumulative_y);
-                    cumulative_y += page.size_pt.y * effective_zoom + GAP;
-                }
-
-                if let Some(target_idx) = viewer_pending_scroll.take() {
-                    if let Some(&top) = page_tops.get(target_idx) {
-                        ui.scroll_to_rect(
-                            Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
-                            Some(egui::Align::TOP),
-                        );
-                    }
-                }
-
-                let page_heights: Vec<f32> = pages
-                    .iter()
-                    .map(|page| page.size_pt.y * effective_zoom)
-                    .collect();
+                let (page_tops, page_heights) = Self::compute_page_layout(pages, effective_zoom);
+                Self::handle_pending_scroll(ui, viewer_pending_scroll, &page_tops);
 
                 let scroll_offset = ui.clip_rect().min.y - ui.min_rect().min.y;
                 let vis_set = visibility.compute(
@@ -268,20 +268,7 @@ impl Viewer {
                 );
 
                 let center_y = scroll_offset + viewport_rect.height() / 2.0;
-                let center_page = page_tops
-                    .iter()
-                    .enumerate()
-                    .min_by(|(_, a), (_, b)| {
-                        let da = (*a - center_y).abs();
-                        let db = (*b - center_y).abs();
-                        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .map(|(i, _)| i)
-                    .unwrap_or(0);
-
-                let mut to_render: Vec<usize> =
-                    vis_set.all_to_render().map(|page| page.0).collect();
-                to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+                let to_render = Self::prioritize_renders(&vis_set, &page_tops, center_y);
 
                 for &idx in &to_render {
                     let key = CacheKey {
@@ -307,56 +294,135 @@ impl Viewer {
                     }
                 }
 
-                for (idx, page) in pages.iter().enumerate() {
-                    let display_size = Vec2::new(
-                        page.size_pt.x * effective_zoom,
-                        page.size_pt.y * effective_zoom,
-                    );
-                    let x_offset = ((available_width - display_size.x) / 2.0).max(0.0);
-                    let (row_rect, _) = ui.allocate_exact_size(
-                        Vec2::new(available_width, display_size.y + GAP),
-                        Sense::hover(),
-                    );
-                    let page_rect =
-                        Rect::from_min_size(row_rect.min + Vec2::new(x_offset, 0.0), display_size);
+                Self::paint_pages(
+                    ui,
+                    pages,
+                    cache,
+                    &vis_set,
+                    effective_zoom,
+                    zoom_bucket,
+                    available_width,
+                    now,
+                );
+            });
+    }
 
-                    let key = CacheKey {
+    fn compute_page_layout(pages: &[PageState], effective_zoom: f32) -> (Vec<f32>, Vec<f32>) {
+        const GAP: f32 = 16.0;
+
+        let mut page_tops = Vec::with_capacity(pages.len());
+        let mut cumulative_y = 0.0_f32;
+        for page in pages {
+            page_tops.push(cumulative_y);
+            cumulative_y += page.size_pt.y * effective_zoom + GAP;
+        }
+
+        let page_heights = pages
+            .iter()
+            .map(|page| page.size_pt.y * effective_zoom)
+            .collect();
+
+        (page_tops, page_heights)
+    }
+
+    fn prioritize_renders(
+        vis_set: &VisibleSet,
+        page_tops: &[f32],
+        center_y: f32,
+    ) -> Vec<usize> {
+        let center_page = page_tops
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| {
+                let da = (*a - center_y).abs();
+                let db = (*b - center_y).abs();
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+
+        let mut to_render: Vec<usize> = vis_set.all_to_render().map(|page| page.0).collect();
+        to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+        to_render
+    }
+
+    fn paint_pages(
+        ui: &mut egui::Ui,
+        pages: &[PageState],
+        cache: &mut TextureCache,
+        vis_set: &VisibleSet,
+        effective_zoom: f32,
+        zoom_bucket: u8,
+        available_width: f32,
+        now: f64,
+    ) {
+        const GAP: f32 = 16.0;
+        const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
+
+        for (idx, page) in pages.iter().enumerate() {
+            let display_size = Vec2::new(
+                page.size_pt.x * effective_zoom,
+                page.size_pt.y * effective_zoom,
+            );
+            let x_offset = ((available_width - display_size.x) / 2.0).max(0.0);
+            let (row_rect, _) = ui.allocate_exact_size(
+                Vec2::new(available_width, display_size.y + GAP),
+                Sense::hover(),
+            );
+            let page_rect =
+                Rect::from_min_size(row_rect.min + Vec2::new(x_offset, 0.0), display_size);
+
+            let key = CacheKey {
+                page_idx: PageIndex(idx),
+                zoom_bucket,
+            };
+
+            if let Some(texture) = cache.get(&key, now) {
+                ui.painter().image(
+                    texture.id(),
+                    page_rect,
+                    Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            } else {
+                let fallback = (0..6_u8).find_map(|bucket| {
+                    let fallback_key = CacheKey {
                         page_idx: PageIndex(idx),
-                        zoom_bucket,
+                        zoom_bucket: bucket,
                     };
+                    cache.get(&fallback_key, now).map(|texture| texture.id())
+                });
 
-                    if let Some(texture) = cache.get(&key, now) {
-                        ui.painter().image(
-                            texture.id(),
-                            page_rect,
-                            Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                            Color32::WHITE,
-                        );
-                    } else {
-                        let fallback = (0..6_u8).find_map(|bucket| {
-                            let fallback_key = CacheKey {
-                                page_idx: PageIndex(idx),
-                                zoom_bucket: bucket,
-                            };
-                            cache.get(&fallback_key, now).map(|texture| texture.id())
-                        });
-
-                        if let Some(tex_id) = fallback {
-                            ui.painter().image(
-                                tex_id,
-                                page_rect,
-                                Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                                Color32::WHITE,
-                            );
-                        } else {
-                            ui.painter().rect_filled(page_rect, 0.0, PLACEHOLDER_FILL);
-                            if vis_set.pages.contains(&PageIndex(idx)) {
-                                egui::Spinner::new().paint_at(ui, page_rect);
-                            }
-                        }
+                if let Some(tex_id) = fallback {
+                    ui.painter().image(
+                        tex_id,
+                        page_rect,
+                        Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                        Color32::WHITE,
+                    );
+                } else {
+                    ui.painter().rect_filled(page_rect, 0.0, PLACEHOLDER_FILL);
+                    if vis_set.pages.contains(&PageIndex(idx)) {
+                        egui::Spinner::new().paint_at(ui, page_rect);
                     }
                 }
-            });
+            }
+        }
+    }
+
+    fn handle_pending_scroll(
+        ui: &mut egui::Ui,
+        pending_scroll: &mut Option<usize>,
+        page_tops: &[f32],
+    ) {
+        if let Some(target_idx) = pending_scroll.take() {
+            if let Some(&top) = page_tops.get(target_idx) {
+                ui.scroll_to_rect(
+                    Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
+                    Some(egui::Align::TOP),
+                );
+            }
+        }
     }
 }
 
