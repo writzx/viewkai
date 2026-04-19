@@ -1,0 +1,80 @@
+   Compiling viewkai-demo v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-demo)
+   Compiling viewkai v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.09s
+     Running unittests src/lib.rs (target/debug/deps/viewkai-4317940a52fe4cf8)
+cache::tests::byte_accounting_correct: test
+cache::tests::cache_key_equality: test
+cache::tests::cap_enforcement_strict: test
+cache::tests::evict_lru_order: test
+viewport::tests::all_pages_fit_in_viewport: test
+viewport::tests::scroll_near_end_no_prefetch_below: test
+viewport::tests::scroll_near_start_no_prefetch_above: test
+viewport::tests::single_visible_page_mid_doc: test
+viewport::tests::variable_heights: test
+zoom::tests::discrete_zoom_returns_value: test
+zoom::tests::dpi_bucket_mapping: test
+zoom::tests::fit_page_uses_smaller_scale: test
+zoom::tests::fit_width_scales_to_viewport: test
+
+13 tests, 0 benchmarks
+     Running tests/hello.rs (target/debug/deps/hello-68b7cf40a3730520)
+viewer_loads_hello_pdf: test
+
+1 test, 0 benchmarks
+     Running tests/memory_budget.rs (target/debug/deps/memory_budget-3dcee6f1871a78e8)
+memory_budget_acceptance: test
+
+1 test, 0 benchmarks
+     Running tests/snapshot_regression.rs (target/debug/deps/snapshot_regression-d38ca66e7a407901)
+snapshot_empty_state: test
+snapshot_error_state: test
+snapshot_hello_custom_2x: test
+snapshot_hello_fitwidth: test
+snapshot_hello_loaded: test
+
+5 tests, 0 benchmarks
+     Running tests/states.rs (target/debug/deps/states-99835b23039769ef)
+viewer_clear_resets_to_empty: test
+viewer_empty_state_renders_placeholder: test
+viewer_error_state_surfaces_and_retries: test
+viewer_loaded_state_renders_pages: test
+viewer_scroll_to_page_advances_layout: test
+viewer_zoom_setter_roundtrips: test
+
+6 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_core-ffd2af83afcaa7c1)
+tests::serde_roundtrip: test
+
+1 test, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_demo-79d4e72558ac4aca)
+0 tests, 0 benchmarks
+     Running unittests src/main.rs (target/debug/deps/viewkai_demo-d38ec9ff86462942)
+0 tests, 0 benchmarks
+     Running tests/shortcuts.rs (target/debug/deps/shortcuts-59a93ae08400ad53)
+demo_harness_helpers_load_expected_fixtures: test
+demo_load_state_failed_dismiss_returns_to_idle: test
+demo_load_state_idle_to_loaded: test
+shortcut_ctrl_0_resets_zoom: test
+shortcut_ctrl_1_sets_fitwidth: test
+shortcut_ctrl_2_sets_fitpage: test
+shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc: test
+shortcut_ctrl_plus_minus_steps_zoom: test
+
+8 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_engine-a129dfb1fdd7640f)
+0 tests, 0 benchmarks
+     Running tests/hello_pdf.rs (target/debug/deps/hello_pdf-683859baf13a484a)
+open_hello_pdf: test
+
+1 test, 0 benchmarks
+   Doc-tests viewkai
+crates/viewkai/src/lib.rs - (line 5): test
+
+1 test, 0 benchmarks
+all doctests ran in 0.57s; merged doctests compilation took 0.27s
+   Doc-tests viewkai_core
+0 tests, 0 benchmarks
+   Doc-tests viewkai_demo
+0 tests, 0 benchmarks
+   Doc-tests viewkai_engine
+0 tests, 0 benchmarks

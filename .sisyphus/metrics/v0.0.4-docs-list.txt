@@ -1,0 +1,9 @@
+CONTRIBUTING.md
+docs/architecture.md
+docs/benchmarks/v0.0.2.png
+docs/benchmarks/v0.0.3.md
+docs/feedback/plan-01.5.md
+docs/feedback/plan-01.md
+docs/office-addin-notes.md
+docs/testing.md
+README.md

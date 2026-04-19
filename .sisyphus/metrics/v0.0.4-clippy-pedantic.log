@@ -1,0 +1,878 @@
+    Checking viewkai-core v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-core)
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai-core/src/coord.rs:31:12
+   |
+31 |     pub fn points_to_pixels(self, pts: f32) -> f32 {
+   |            ^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+   = note: `-W clippy::must-use-candidate` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::must_use_candidate)]`
+help: add the attribute
+   |
+31 ~     #[must_use] 
+32 ~     pub fn points_to_pixels(self, pts: f32) -> f32 {
+   |
+
+warning: `viewkai-core` (lib test) generated 1 warning (1 duplicate)
+warning: `viewkai-core` (lib) generated 1 warning (run `cargo clippy --fix --lib -p viewkai-core` to apply 1 suggestion)
+    Checking viewkai-engine v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-engine)
+warning: item in documentation is missing backticks
+ --> crates/viewkai-engine/src/lib.rs:1:5
+  |
+1 | //! PDFium rendering engine for viewkai.
+  |     ^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#doc_markdown
+  = note: `-W clippy::doc-markdown` implied by `-W clippy::pedantic`
+  = help: to override `-W clippy::pedantic` add `#[allow(clippy::doc_markdown)]`
+help: try
+  |
+1 - //! PDFium rendering engine for viewkai.
+1 + //! `PDFium` rendering engine for viewkai.
+  |
+
+warning: item in documentation is missing backticks
+  --> crates/viewkai-engine/src/lib.rs:31:20
+   |
+31 | /// Initialise the PDFium library.
+   |                    ^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#doc_markdown
+help: try
+   |
+31 - /// Initialise the PDFium library.
+31 + /// Initialise the `PDFium` library.
+   |
+
+warning: casting `i32` to `usize` may lose the sign of the value
+   --> crates/viewkai-engine/src/lib.rs:131:25
+    |
+131 |             let count = doc.pages().len() as usize;
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_sign_loss
+    = note: `-W clippy::cast-sign-loss` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_sign_loss)]`
+
+warning: casting `usize` to `i32` may truncate the value on targets with 64-bit wide pointers
+   --> crates/viewkai-engine/src/lib.rs:136:30
+    |
+136 |                         .get(i as PdfPageIndex)
+    |                              ^^^^^^^^^^^^^^^^^
+    |
+    = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+    = note: `-W clippy::cast-possible-truncation` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_possible_truncation)]`
+help: ... or use `try_from` and handle the error accordingly
+    |
+136 -                         .get(i as PdfPageIndex)
+136 +                         .get(PdfPageIndex::try_from(i))
+    |
+
+warning: casting `usize` to `i32` may wrap around the value on targets with 32-bit wide pointers
+   --> crates/viewkai-engine/src/lib.rs:136:30
+    |
+136 |                         .get(i as PdfPageIndex)
+    |                              ^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_wrap
+    = note: `-W clippy::cast-possible-wrap` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_possible_wrap)]`
+
+warning: this method could have a `#[must_use]` attribute
+   --> crates/viewkai-engine/src/lib.rs:156:12
+    |
+156 |     pub fn page_count(&self) -> usize {
+    |            ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+    = note: `-W clippy::must-use-candidate` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::must_use_candidate)]`
+help: add the attribute
+    |
+156 ~     #[must_use] 
+157 ~     pub fn page_count(&self) -> usize {
+    |
+
+warning: this method could have a `#[must_use]` attribute
+   --> crates/viewkai-engine/src/lib.rs:173:12
+    |
+173 |     pub fn bytes(&self) -> &[u8] {
+    |            ^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+    |
+173 ~     #[must_use] 
+174 ~     pub fn bytes(&self) -> &[u8] {
+    |
+
+warning: casting `usize` to `i32` may truncate the value on targets with 64-bit wide pointers
+   --> crates/viewkai-engine/src/lib.rs:197:14
+    |
+197 |         .get(idx.0 as PdfPageIndex)
+    |              ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+help: ... or use `try_from` and handle the error accordingly
+    |
+197 -         .get(idx.0 as PdfPageIndex)
+197 +         .get(PdfPageIndex::try_from(idx.0))
+    |
+
+warning: casting `usize` to `i32` may wrap around the value on targets with 32-bit wide pointers
+   --> crates/viewkai-engine/src/lib.rs:197:14
+    |
+197 |         .get(idx.0 as PdfPageIndex)
+    |              ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_wrap
+
+warning: casting `u32` to `f32` may cause a loss of precision (`u32` is 32 bits wide, but `f32`'s mantissa is only 23 bits wide)
+   --> crates/viewkai-engine/src/lib.rs:203:17
+    |
+203 |     let scale = dpi as f32 / 72.0;
+    |                 ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_precision_loss
+    = note: `-W clippy::cast-precision-loss` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_precision_loss)]`
+
+warning: casting `f32` to `i32` may truncate the value
+   --> crates/viewkai-engine/src/lib.rs:204:17
+    |
+204 |     let width = (page.width().value * scale).round() as Pixels;
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+
+warning: casting `f32` to `i32` may truncate the value
+   --> crates/viewkai-engine/src/lib.rs:205:18
+    |
+205 |     let height = (page.height().value * scale).round() as Pixels;
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+
+warning: casting `i32` to `u32` may lose the sign of the value
+   --> crates/viewkai-engine/src/lib.rs:214:16
+    |
+214 |         width: width as u32,
+    |                ^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_sign_loss
+
+warning: casting `i32` to `u32` may lose the sign of the value
+   --> crates/viewkai-engine/src/lib.rs:215:17
+    |
+215 |         height: height as u32,
+    |                 ^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_sign_loss
+
+warning: `viewkai-engine` (lib) generated 14 warnings (3 duplicates) (run `cargo clippy --fix --lib -p viewkai-engine` to apply 2 suggestions)
+    Checking viewkai v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai)
+warning: `viewkai-engine` (lib test) generated 14 warnings (11 duplicates) (run `cargo clippy --fix --lib -p viewkai-engine --tests` to apply 2 suggestions)
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/cache.rs:37:12
+   |
+37 |     pub fn new(budget_bytes: usize) -> Self {
+   |            ^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+   = note: `-W clippy::must-use-candidate` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::must_use_candidate)]`
+help: add the attribute
+   |
+37 ~     #[must_use] 
+38 ~     pub fn new(budget_bytes: usize) -> Self {
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/cache.rs:46:12
+   |
+46 |     pub fn default_budget() -> Self {
+   |            ^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+46 ~     #[must_use] 
+47 ~     pub fn default_budget() -> Self {
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/cache.rs:51:12
+   |
+51 |     pub fn total_bytes(&self) -> usize {
+   |            ^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+51 ~     #[must_use] 
+52 ~     pub fn total_bytes(&self) -> usize {
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/viewport.rs:34:12
+   |
+34 |     pub fn new(prefetch_distance: usize) -> Self {
+   |            ^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+34 ~     #[must_use] 
+35 ~     pub fn new(prefetch_distance: usize) -> Self {
+   |
+
+warning: docs for function which may panic missing `# Panics` section
+  --> crates/viewkai/src/viewport.rs:45:5
+   |
+45 | /     pub fn compute(
+46 | |         &self,
+47 | |         scroll_offset_y: f32,
+48 | |         viewport_height: f32,
+49 | |         page_tops: &[f32],
+50 | |         page_heights: &[f32],
+51 | |     ) -> VisibleSet {
+   | |___________________^
+   |
+note: first possible panic found here
+  --> crates/viewkai/src/viewport.rs:52:9
+   |
+52 |         assert_eq!(page_tops.len(), page_heights.len());
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#missing_panics_doc
+   = note: `-W clippy::missing-panics-doc` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::missing_panics_doc)]`
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/zoom.rs:31:12
+   |
+31 |     pub fn effective_zoom(
+   |            ^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+31 ~     #[must_use] 
+32 ~     pub fn effective_zoom(
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/zoom.rs:62:12
+   |
+62 |     pub fn zoom_to_dpi_bucket(zoom: f32) -> u32 {
+   |            ^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+62 ~     #[must_use] 
+63 ~     pub fn zoom_to_dpi_bucket(zoom: f32) -> u32 {
+   |
+
+warning: casting `f32` to `u32` may truncate the value
+  --> crates/viewkai/src/zoom.rs:64:26
+   |
+64 |         let target_dpi = (zoom * 72.0).round() as u32;
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+   = note: `-W clippy::cast-possible-truncation` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_possible_truncation)]`
+
+warning: casting `f32` to `u32` may lose the sign of the value
+  --> crates/viewkai/src/zoom.rs:64:26
+   |
+64 |         let target_dpi = (zoom * 72.0).round() as u32;
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_sign_loss
+   = note: `-W clippy::cast-sign-loss` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_sign_loss)]`
+
+warning: casts from `u32` to `i64` can be expressed infallibly using `From`
+  --> crates/viewkai/src/zoom.rs:68:37
+   |
+68 |             .min_by_key(|&&bucket| (bucket as i64 - target_dpi as i64).unsigned_abs())
+   |                                     ^^^^^^^^^^^^^
+   |
+   = help: an `as` cast can become silently lossy if the types change in the future
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_lossless
+   = note: `-W clippy::cast-lossless` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_lossless)]`
+help: use `i64::from` instead
+   |
+68 -             .min_by_key(|&&bucket| (bucket as i64 - target_dpi as i64).unsigned_abs())
+68 +             .min_by_key(|&&bucket| (i64::from(bucket) - target_dpi as i64).unsigned_abs())
+   |
+
+warning: casts from `u32` to `i64` can be expressed infallibly using `From`
+  --> crates/viewkai/src/zoom.rs:68:53
+   |
+68 |             .min_by_key(|&&bucket| (bucket as i64 - target_dpi as i64).unsigned_abs())
+   |                                                     ^^^^^^^^^^^^^^^^^
+   |
+   = help: an `as` cast can become silently lossy if the types change in the future
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_lossless
+help: use `i64::from` instead
+   |
+68 -             .min_by_key(|&&bucket| (bucket as i64 - target_dpi as i64).unsigned_abs())
+68 +             .min_by_key(|&&bucket| (bucket as i64 - i64::from(target_dpi)).unsigned_abs())
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/zoom.rs:74:12
+   |
+74 |     pub fn dpi_to_bucket_index(dpi: u32) -> u8 {
+   |            ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+74 ~     #[must_use] 
+75 ~     pub fn dpi_to_bucket_index(dpi: u32) -> u8 {
+   |
+
+warning: casting `usize` to `u8` may truncate the value
+  --> crates/viewkai/src/zoom.rs:77:9
+   |
+77 | /         BUCKETS
+78 | |             .iter()
+79 | |             .position(|&bucket| bucket == dpi)
+80 | |             .unwrap_or(0) as u8
+   | |_______________________________^
+   |
+   = help: if this is intentional allow the lint with `#[allow(clippy::cast_possible_truncation)]` ...
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_truncation
+help: ... or use `try_from` and handle the error accordingly
+   |
+77 ~         u8::try_from(BUCKETS
+78 +             .iter()
+79 +             .position(|&bucket| bucket == dpi)
+80 +             .unwrap_or(0))
+   |
+
+warning: casting `usize` to `f32` may cause a loss of precision (`usize` can be up to 64 bits wide depending on the target architecture, but `f32`'s mantissa is only 23 bits wide)
+   --> crates/viewkai/src/viewport.rs:105:39
+    |
+105 |         let tops = (0..count).map(|i| i as f32 * height).collect();
+    |                                       ^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_precision_loss
+    = note: `-W clippy::cast-precision-loss` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_precision_loss)]`
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/lib.rs:64:12
+   |
+64 |     pub fn new() -> Self {
+   |            ^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+64 ~     #[must_use] 
+65 ~     pub fn new() -> Self {
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai/src/lib.rs:78:12
+   |
+78 |     pub fn zoom(&self) -> ZoomState {
+   |            ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+78 ~     #[must_use] 
+79 ~     pub fn zoom(&self) -> ZoomState {
+   |
+
+warning: item in documentation is missing backticks
+  --> crates/viewkai/src/lib.rs:97:9
+   |
+97 |     /// PDFium engine has not been initialised (call [`viewkai_engine::init()`]
+   |         ^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#doc_markdown
+   = note: `-W clippy::doc-markdown` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::doc_markdown)]`
+help: try
+   |
+97 -     /// PDFium engine has not been initialised (call [`viewkai_engine::init()`]
+97 +     /// `PDFium` engine has not been initialised (call [`viewkai_engine::init()`]
+   |
+
+warning: this method could have a `#[must_use]` attribute
+   --> crates/viewkai/src/lib.rs:138:12
+    |
+138 |     pub fn page_count(&self) -> usize {
+    |            ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+    |
+138 ~     #[must_use] 
+139 ~     pub fn page_count(&self) -> usize {
+    |
+
+warning: this method could have a `#[must_use]` attribute
+   --> crates/viewkai/src/lib.rs:146:12
+    |
+146 |     pub fn cache_bytes(&self) -> usize {
+    |            ^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+    |
+146 ~     #[must_use] 
+147 ~     pub fn cache_bytes(&self) -> usize {
+    |
+
+warning: this method could have a `#[must_use]` attribute
+   --> crates/viewkai/src/lib.rs:151:12
+    |
+151 |     pub fn page_size_pt(&self, idx: usize) -> Option<Vec2> {
+    |            ^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+    |
+151 ~     #[must_use] 
+152 ~     pub fn page_size_pt(&self, idx: usize) -> Option<Vec2> {
+    |
+
+warning: this function has too many lines (128/100)
+   --> crates/viewkai/src/lib.rs:204:5
+    |
+204 | /     fn show_pages(
+205 | |         ui: &mut egui::Ui,
+206 | |         document: &Arc<Document>,
+207 | |         pages: &[PageState],
+...   |
+211 | |         viewer_pending_scroll: &mut Option<usize>,
+212 | |     ) {
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_lines
+    = note: `-W clippy::too-many-lines` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::too_many_lines)]`
+
+warning: called `map(<f>).unwrap_or(<a>)` on an `Option` value
+   --> crates/viewkai/src/lib.rs:267:35
+    |
+267 |                   let center_page = page_tops
+    |  ___________________________________^
+268 | |                     .iter()
+269 | |                     .enumerate()
+270 | |                     .min_by(|(_, a), (_, b)| {
+...   |
+275 | |                     .map(|(i, _)| i)
+276 | |                     .unwrap_or(0);
+    | |_________________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#map_unwrap_or
+    = note: `-W clippy::map-unwrap-or` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::map_unwrap_or)]`
+help: use `map_or(<a>, <f>)` instead
+    |
+275 -                     .map(|(i, _)| i)
+276 -                     .unwrap_or(0);
+275 +                     .map_or(0, |(i, _)| i);
+    |
+
+warning: casting `usize` to `isize` may wrap around the value
+   --> crates/viewkai/src/lib.rs:280:47
+    |
+280 |                 to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+    |                                               ^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_wrap
+    = note: `-W clippy::cast-possible-wrap` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_possible_wrap)]`
+
+warning: casting `usize` to `isize` may wrap around the value
+   --> crates/viewkai/src/lib.rs:280:62
+    |
+280 |                 to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+    |                                                              ^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_possible_wrap
+
+warning: strict comparison of `f32` or `f64`
+  --> crates/viewkai/src/zoom.rs:91:9
+   |
+91 |         assert_eq!(z.effective_zoom(800.0, 600.0, 612.0, 792.0), 1.5);
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#float_cmp
+   = note: `-W clippy::float-cmp` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::float_cmp)]`
+   = note: this warning originates in the macro `assert_eq` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: redundant closure
+   --> crates/viewkai/src/lib.rs:337:63
+    |
+337 | ...                   cache.get(&fallback_key, now).map(|texture| texture.id())
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `egui::TextureHandle::id`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+    = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: this function could have a `#[must_use]` attribute
+   --> crates/viewkai/src/lib.rs:359:8
+    |
+359 | pub fn library_name() -> &'static str {
+    |        ^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+    |
+359 + #[must_use] 
+360 | pub fn library_name() -> &'static str {
+    |
+
+warning: `viewkai` (lib) generated 25 warnings (2 duplicates) (run `cargo clippy --fix --lib -p viewkai` to apply 16 suggestions)
+    Checking viewkai-demo v0.0.4 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-demo)
+warning: `viewkai` (lib test) generated 27 warnings (23 duplicates) (run `cargo clippy --fix --lib -p viewkai --tests` to apply 2 suggestions)
+warning: consider adding a `;` to the last statement for consistent formatting
+  --> crates/viewkai/benches/large_doc.rs:9:9
+   |
+ 9 | /         b.iter(|| {
+10 | |             let doc = viewkai_engine::Document::from_bytes(bytes.clone())
+11 | |                 .expect("should open 500page.pdf");
+12 | |             criterion::black_box(doc.page_count())
+13 | |         })
+   | |__________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#semicolon_if_nothing_returned
+   = note: `-W clippy::semicolon-if-nothing-returned` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::semicolon_if_nothing_returned)]`
+help: add a `;` here
+   |
+ 9 |         b.iter(|| {
+...
+12 |             criterion::black_box(doc.page_count())
+13 ~         });
+   |
+
+warning: consider adding a `;` to the last statement for consistent formatting
+  --> crates/viewkai/benches/large_doc.rs:23:9
+   |
+23 | /         b.iter(|| {
+24 | |             let raw =
+25 | |                 viewkai_engine::render_page(&doc, PageIndex(0), 150).expect("should render page");
+26 | |             criterion::black_box(raw.pixels.len())
+27 | |         })
+   | |__________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#semicolon_if_nothing_returned
+help: add a `;` here
+   |
+23 |         b.iter(|| {
+...
+26 |             criterion::black_box(raw.pixels.len())
+27 ~         });
+   |
+
+warning: `viewkai` (bench "large_doc") generated 2 warnings (run `cargo clippy --fix --bench "large_doc" -p viewkai` to apply 2 suggestions)
+warning: variables can be used directly in the `format!` string
+  --> crates/viewkai/tests/memory_budget.rs:35:9
+   |
+35 | /         assert!(
+36 | |             current <= budget,
+37 | |             "cache bytes {} exceeded budget {} on page {}",
+38 | |             current,
+39 | |             budget,
+40 | |             page_idx
+41 | |         );
+   | |_________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#uninlined_format_args
+   = note: `-W clippy::uninlined-format-args` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::uninlined_format_args)]`
+
+warning: casting `usize` to `f64` may cause a loss of precision (`usize` can be up to 64 bits wide depending on the target architecture, but `f64`'s mantissa is only 52 bits wide)
+  --> crates/viewkai/tests/memory_budget.rs:47:9
+   |
+47 |         peak_bytes as f64 / 1024.0 / 1024.0
+   |         ^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_precision_loss
+   = note: `-W clippy::cast-precision-loss` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_precision_loss)]`
+
+warning: casting `usize` to `f64` may cause a loss of precision (`usize` can be up to 64 bits wide depending on the target architecture, but `f64`'s mantissa is only 52 bits wide)
+  --> crates/viewkai/tests/memory_budget.rs:52:9
+   |
+52 |         budget as f64 / 1024.0 / 1024.0
+   |         ^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#cast_precision_loss
+
+warning: redundant closure
+  --> crates/viewkai/tests/states.rs:15:25
+   |
+15 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: redundant closure
+  --> crates/viewkai/tests/states.rs:35:25
+   |
+35 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai/tests/states.rs:61:25
+   |
+61 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai/tests/states.rs:91:25
+   |
+91 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai-demo/src/lib.rs:34:12
+   |
+34 |     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+   |            ^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+   = note: `-W clippy::must-use-candidate` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::must_use_candidate)]`
+help: add the attribute
+   |
+34 ~     #[must_use] 
+35 ~     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+   |
+
+warning: redundant closure
+   --> crates/viewkai/tests/states.rs:131:25
+    |
+131 |         .unwrap_or_else(|poison| poison.into_inner());
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: `viewkai` (test "memory_budget") generated 3 warnings (run `cargo clippy --fix --test "memory_budget" -p viewkai` to apply 1 suggestion)
+warning: redundant closure
+   --> crates/viewkai/tests/states.rs:159:25
+    |
+159 |         .unwrap_or_else(|poison| poison.into_inner());
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: `viewkai` (test "states") generated 6 warnings (run `cargo clippy --fix --test "states" -p viewkai` to apply 6 suggestions)
+warning: docs for function returning `Result` missing `# Errors` section
+  --> crates/viewkai-demo/src/lib.rs:53:5
+   |
+53 |     pub fn load_bytes_sync(&mut self, bytes: Vec<u8>) -> Result<(), String> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#missing_errors_doc
+   = note: `-W clippy::missing-errors-doc` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::missing_errors_doc)]`
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai-demo/src/lib.rs:63:12
+   |
+63 |     pub fn viewer(&self) -> &viewkai::Viewer {
+   |            ^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+63 ~     #[must_use] 
+64 ~     pub fn viewer(&self) -> &viewkai::Viewer {
+   |
+
+warning: this method could have a `#[must_use]` attribute
+  --> crates/viewkai-demo/src/lib.rs:67:12
+   |
+67 |     pub fn load_state(&self) -> &DemoLoadState {
+   |            ^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#must_use_candidate
+help: add the attribute
+   |
+67 ~     #[must_use] 
+68 ~     pub fn load_state(&self) -> &DemoLoadState {
+   |
+
+warning: called `map(<f>).unwrap_or_else(<g>)` on a `Result` value
+  --> crates/viewkai-demo/src/lib.rs:73:20
+   |
+73 |           let size = doc
+   |  ____________________^
+74 | |             .page_size(PageIndex(0))
+75 | |             .map(|page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt))
+76 | |             .unwrap_or_else(|_| "unknown".to_owned());
+   | |_____________________________________________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#map_unwrap_or
+   = note: `-W clippy::map-unwrap-or` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::map_unwrap_or)]`
+help: try
+   |
+73 ~         let size = doc
+74 ~             .page_size(PageIndex(0)).map_or_else(|_| "unknown".to_owned(), |page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt));
+   |
+
+warning: this argument is passed by value, but not consumed in the function body
+  --> crates/viewkai-demo/src/lib.rs:85:37
+   |
+85 |     fn load_bytes(&mut self, bytes: Vec<u8>) {
+   |                                     ^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#needless_pass_by_value
+   = note: `-W clippy::needless-pass-by-value` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::needless_pass_by_value)]`
+help: consider changing the type to
+   |
+85 -     fn load_bytes(&mut self, bytes: Vec<u8>) {
+85 +     fn load_bytes(&mut self, bytes: &[u8]) {
+   |
+help: change `bytes.clone()` to
+   |
+86 -         match self.viewer.load_bytes(bytes.clone()) {
+86 +         match self.viewer.load_bytes(bytes.to_owned()) {
+   |
+
+warning: this function has too many lines (160/100)
+   --> crates/viewkai-demo/src/lib.rs:243:5
+    |
+243 |     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_lines
+    = note: `-W clippy::too-many-lines` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::too_many_lines)]`
+
+warning: redundant closure
+   --> crates/viewkai-demo/src/lib.rs:410:40
+    |
+410 |             let pinch_delta = ui.input(|i| i.zoom_delta());
+    |                                        ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `eframe::egui::InputState::zoom_delta`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+    = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: docs for function which may panic missing `# Panics` section
+   --> crates/viewkai-demo/src/lib.rs:428:1
+    |
+428 | pub fn run_native() -> eframe::Result {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: first possible panic found here
+   --> crates/viewkai-demo/src/lib.rs:430:5
+    |
+430 |     init().expect("Failed to initialize PDFium");
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#missing_panics_doc
+    = note: `-W clippy::missing-panics-doc` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::missing_panics_doc)]`
+
+warning: docs for function returning `Result` missing `# Errors` section
+   --> crates/viewkai-demo/src/lib.rs:428:1
+    |
+428 | pub fn run_native() -> eframe::Result {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#missing_errors_doc
+
+warning: `viewkai-demo` (lib) generated 10 warnings (4 duplicates) (run `cargo clippy --fix --lib -p viewkai-demo` to apply 3 suggestions)
+warning: `viewkai-demo` (lib test) generated 10 warnings (6 duplicates) (run `cargo clippy --fix --lib -p viewkai-demo --tests` to apply 2 suggestions)
+warning: redundant closure
+  --> crates/viewkai-demo/tests/shortcuts.rs:25:25
+   |
+25 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: redundant closure
+  --> crates/viewkai-demo/tests/shortcuts.rs:41:25
+   |
+41 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai-demo/tests/shortcuts.rs:54:25
+   |
+54 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai-demo/tests/shortcuts.rs:67:25
+   |
+67 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai-demo/tests/shortcuts.rs:87:25
+   |
+87 |         .unwrap_or_else(|poison| poison.into_inner());
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+   --> crates/viewkai-demo/tests/shortcuts.rs:104:25
+    |
+104 |         .unwrap_or_else(|poison| poison.into_inner());
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+   --> crates/viewkai-demo/tests/shortcuts.rs:122:25
+    |
+122 |         .unwrap_or_else(|poison| poison.into_inner());
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+   --> crates/viewkai-demo/tests/shortcuts.rs:147:25
+    |
+147 |         .unwrap_or_else(|poison| poison.into_inner());
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#redundant_closure_for_method_calls
+
+warning: `viewkai-demo` (test "shortcuts") generated 8 warnings (run `cargo clippy --fix --test "shortcuts" -p viewkai-demo` to apply 8 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.93s
