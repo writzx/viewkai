@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## v0.0.5 — 2026-04-19 (Plan 01.75, architecture pass)
+
+### Changed
+- `viewkai::Viewer` internally decomposed into `Viewer { state, render, pending_scroll_to_page }`. No public API change.
+- `ViewerState::Error` now wraps the structured `viewkai::LoadError` enum instead of a `String`. Existing callers that match on the error get richer context; error-as-string callers must adapt.
+- `viewkai_engine::Document` now caches a live `PdfDocument` internally; subsequent `render_page` calls no longer re-parse the PDF bytes.
+- `viewkai_engine::EngineError` enum replaces the previous string-typed error surface.
+
+### Added
+- Governance docs: `docs/coding-style.md`, `docs/dependency-policy.md`, `docs/error-handling.md`.
+- CI jobs: `deny`, `machete`, `hack`, `msrv`, `docs`.
+- `[workspace.lints]` clippy-pedantic + clippy-cargo at warn level.
+- `viewkai-demo/src/zoom_ui.rs` — shared zoom toolbar helper.
+- `viewkai-demo/src/wasm_state.rs` — consolidated WASM-only state.
+
+### Removed
+- `viewkai-core` file fragmentation: `coord.rs`, `page.rs`, `render.rs` merged into `types.rs`.
+
+### Fixed
+- `clippy.toml` MSRV was `1.81`, incompatible with `edition = "2024"`; corrected to `1.92` (actual minimum from transitive deps).
+- `cache::evict_lru` dead `else`-branch removed.
+- `cache::evict_page` now uses single-pass `HashMap::retain`.
+- `zoom.rs` `BUCKETS` constant was duplicated in two functions; unified to one module-level const.
+- `render_page` no longer re-parses PDF bytes on every frame.
+
+### Architecture
+- Three quality criteria codified: less code / better architecture, published best practices, library-documented idioms. Enforced by `[workspace.lints]` + the new CI jobs.
+
 ## [0.0.4] — 2026-04-18 — Testing Migration
 
 ### Changed

@@ -1,0 +1,93 @@
+   Compiling viewkai-core v0.0.5 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-core)
+   Compiling viewkai-engine v0.0.5 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-engine)
+   Compiling viewkai v0.0.5 (/Users/wdas/projects/valeria/viewkai/crates/viewkai)
+   Compiling viewkai-demo v0.0.5 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-demo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.58s
+     Running unittests src/lib.rs (target/debug/deps/viewkai-85e2f1ffb8829439)
+cache::tests::byte_accounting_correct: test
+cache::tests::cache_key_equality: test
+cache::tests::cap_enforcement_strict: test
+cache::tests::evict_lru_order: test
+viewport::tests::all_pages_fit_in_viewport: test
+viewport::tests::scroll_near_end_no_prefetch_below: test
+viewport::tests::scroll_near_start_no_prefetch_above: test
+viewport::tests::single_visible_page_mid_doc: test
+viewport::tests::variable_heights: test
+zoom::tests::discrete_zoom_returns_value: test
+zoom::tests::dpi_bucket_mapping: test
+zoom::tests::fit_page_uses_smaller_scale: test
+zoom::tests::fit_width_scales_to_viewport: test
+
+13 tests, 0 benchmarks
+     Running tests/cache_invariants.rs (target/debug/deps/cache_invariants-2279f7f31fe7cd54)
+evict_lru_removes_exactly_one_entry: test
+evict_page_removes_all_zoom_buckets_for_page: test
+insert_cannot_exceed_budget: test
+
+3 tests, 0 benchmarks
+     Running tests/hello.rs (target/debug/deps/hello-aa61d9860b019a7f)
+viewer_loads_hello_pdf: test
+
+1 test, 0 benchmarks
+     Running tests/memory_budget.rs (target/debug/deps/memory_budget-3fb4e01490363ead)
+memory_budget_acceptance: test
+
+1 test, 0 benchmarks
+     Running tests/snapshot_regression.rs (target/debug/deps/snapshot_regression-fe4081157fb20719)
+snapshot_empty_state: test
+snapshot_error_state: test
+snapshot_hello_custom_2x: test
+snapshot_hello_fitwidth: test
+snapshot_hello_loaded: test
+
+5 tests, 0 benchmarks
+     Running tests/states.rs (target/debug/deps/states-2350f6e257a381b0)
+viewer_clear_resets_to_empty: test
+viewer_empty_state_renders_placeholder: test
+viewer_error_state_surfaces_and_retries: test
+viewer_loaded_state_renders_pages: test
+viewer_scroll_to_page_advances_layout: test
+viewer_zoom_setter_roundtrips: test
+
+6 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_core-af4c53562506f867)
+tests::serde_roundtrip: test
+
+1 test, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_demo-457ae422c506cf9c)
+0 tests, 0 benchmarks
+     Running unittests src/main.rs (target/debug/deps/viewkai_demo-d788a9ffb8cd71b3)
+0 tests, 0 benchmarks
+     Running tests/shortcuts.rs (target/debug/deps/shortcuts-63ad62214c9a52ef)
+demo_harness_helpers_load_expected_fixtures: test
+demo_load_state_failed_dismiss_returns_to_idle: test
+demo_load_state_idle_to_loaded: test
+shortcut_ctrl_0_resets_zoom: test
+shortcut_ctrl_1_sets_fitwidth: test
+shortcut_ctrl_2_sets_fitpage: test
+shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc: test
+shortcut_ctrl_plus_minus_steps_zoom: test
+
+8 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_engine-95364a62cbd7b721)
+0 tests, 0 benchmarks
+     Running tests/cached_render.rs (target/debug/deps/cached_render-c8354cd95d987c6d)
+render_page_out_of_bounds_returns_typed_error: test
+render_same_page_twice_succeeds: test
+
+2 tests, 0 benchmarks
+     Running tests/hello_pdf.rs (target/debug/deps/hello_pdf-5bfdb01a5dec0038)
+open_hello_pdf: test
+
+1 test, 0 benchmarks
+   Doc-tests viewkai
+crates/viewkai/src/lib.rs - (line 5): test
+
+1 test, 0 benchmarks
+all doctests ran in 0.58s; merged doctests compilation took 0.31s
+   Doc-tests viewkai_core
+0 tests, 0 benchmarks
+   Doc-tests viewkai_demo
+0 tests, 0 benchmarks
+   Doc-tests viewkai_engine
+0 tests, 0 benchmarks
