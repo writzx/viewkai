@@ -3,12 +3,14 @@ use viewkai::{Viewer, zoom::ZoomState};
 use viewkai_core::page::PageIndex;
 use viewkai_engine::{Document, init};
 
+mod zoom_ui;
+#[cfg(target_arch = "wasm32")]
+mod wasm_state;
+
 #[cfg(target_arch = "wasm32")]
 use std::sync::{Arc, Mutex};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
-
-const DISCRETE_LEVELS: [f32; 9] = [0.25, 0.50, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
 
 pub enum DemoLoadState {
     Idle,
@@ -21,14 +23,42 @@ pub struct DemoApp {
     viewer: Viewer,
     load_state: DemoLoadState,
     #[cfg(target_arch = "wasm32")]
-    url_input: String,
+    wasm_state: wasm_state::WasmState,
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
     total_pages: usize,
-    #[cfg(target_arch = "wasm32")]
-    pending_bytes: Option<Arc<Mutex<Option<Result<Vec<u8>, String>>>>>,
 }
+
+enum LoadEvent {
+    BytesReceived { bytes: Vec<u8>, source_label: String },
+    LoadSucceeded,
+    LoadFailed { message: String },
+    Reset,
+}
+
+enum ShortcutAction {
+    ResetZoom,
+    FitWidth,
+    FitPage,
+    ZoomIn,
+    ZoomOut,
+    FocusPageInput,
+}
+
+const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
+    (egui::Modifiers::CTRL, egui::Key::Num0, ShortcutAction::ResetZoom),
+    (egui::Modifiers::CTRL, egui::Key::Num1, ShortcutAction::FitWidth),
+    (egui::Modifiers::CTRL, egui::Key::Num2, ShortcutAction::FitPage),
+    (egui::Modifiers::CTRL, egui::Key::Plus, ShortcutAction::ZoomIn),
+    (egui::Modifiers::CTRL, egui::Key::Equals, ShortcutAction::ZoomIn),
+    (egui::Modifiers::CTRL, egui::Key::Minus, ShortcutAction::ZoomOut),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::G,
+        ShortcutAction::FocusPageInput,
+    ),
+];
 
 impl DemoApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -38,13 +68,38 @@ impl DemoApp {
             viewer: Viewer::new(),
             load_state: DemoLoadState::Idle,
             #[cfg(target_arch = "wasm32")]
-            url_input: String::new(),
+            wasm_state: wasm_state::WasmState::default(),
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
             total_pages: 0,
-            #[cfg(target_arch = "wasm32")]
-            pending_bytes: None,
+        }
+    }
+
+    fn transition(&mut self, ev: LoadEvent) {
+        match ev {
+            LoadEvent::BytesReceived {
+                bytes,
+                source_label,
+            } => {
+                self.load_state = DemoLoadState::AcquiringBytes {
+                    label: source_label,
+                };
+                self.load_bytes(bytes);
+            }
+            LoadEvent::LoadSucceeded => {
+                self.load_state = DemoLoadState::Loaded;
+            }
+            LoadEvent::LoadFailed { message } => {
+                self.load_state = DemoLoadState::Failed { msg: message };
+            }
+            LoadEvent::Reset => {
+                self.viewer.clear();
+                self.load_state = DemoLoadState::Idle;
+                self.debug_info = None;
+                self.total_pages = 0;
+                self.page_input.clear();
+            }
         }
     }
 
@@ -95,15 +150,15 @@ impl DemoApp {
                     Some(Self::describe_pdf(&bytes).unwrap_or_else(|err| {
                         format!("PDF loaded; debug info unavailable: {err}")
                     }));
-                self.load_state = DemoLoadState::Loaded;
+                self.transition(LoadEvent::LoadSucceeded);
             }
             Err(err) => {
                 self.debug_info = None;
                 self.total_pages = 0;
                 self.page_input.clear();
-                self.load_state = DemoLoadState::Failed {
-                    msg: err.to_string(),
-                };
+                self.transition(LoadEvent::LoadFailed {
+                    message: err.to_string(),
+                });
             }
         }
     }
@@ -122,18 +177,17 @@ impl DemoApp {
             return;
         };
 
-        self.load_state = DemoLoadState::AcquiringBytes {
-            label: format!("Reading {}", path.display()),
-        };
-
         match std::fs::read(&path) {
-            Ok(bytes) => self.load_bytes(bytes),
+            Ok(bytes) => self.transition(LoadEvent::BytesReceived {
+                bytes,
+                source_label: format!("Reading {}", path.display()),
+            }),
             Err(err) => {
                 self.debug_info = None;
                 self.viewer.clear();
-                self.load_state = DemoLoadState::Failed {
-                    msg: format!("Failed to read {}: {err}", path.display()),
-                };
+                self.transition(LoadEvent::LoadFailed {
+                    message: format!("Failed to read {}: {err}", path.display()),
+                });
             }
         }
     }
@@ -156,21 +210,24 @@ impl DemoApp {
             repaint_ctx.request_repaint();
         });
 
-        self.pending_bytes = Some(pending);
+        self.wasm_state.pending_bytes = Some(pending);
     }
 
     #[cfg(target_arch = "wasm32")]
     fn poll_pending_bytes(&mut self) {
-        if let Some(pending) = self.pending_bytes.as_ref().map(Arc::clone) {
+        if let Some(pending) = self.wasm_state.pending_bytes.as_ref().map(Arc::clone) {
             if let Ok(mut guard) = pending.try_lock() {
                 if let Some(result) = guard.take() {
-                    self.pending_bytes = None;
+                    self.wasm_state.pending_bytes = None;
                     match result {
-                        Ok(bytes) => self.load_bytes(bytes),
+                        Ok(bytes) => self.transition(LoadEvent::BytesReceived {
+                            bytes,
+                            source_label: "Processing fetched PDF".to_owned(),
+                        }),
                         Err(msg) => {
                             self.debug_info = None;
                             self.viewer.clear();
-                            self.load_state = DemoLoadState::Failed { msg };
+                            self.transition(LoadEvent::LoadFailed { message: msg });
                         }
                     }
                 }
@@ -191,11 +248,7 @@ impl DemoApp {
     }
 
     fn dismiss_error(&mut self) {
-        self.viewer.clear();
-        self.debug_info = None;
-        self.total_pages = 0;
-        self.page_input.clear();
-        self.load_state = DemoLoadState::Idle;
+        self.transition(LoadEvent::Reset);
     }
 
     fn show_loading(ui: &mut egui::Ui, label: &str) {
@@ -237,6 +290,32 @@ impl DemoApp {
             self.viewer.scroll_to_page(page_num - 1);
         }
     }
+
+    fn handle_shortcuts(&mut self, ctx: &egui::Context) {
+        for (mods, key, action) in SHORTCUTS {
+            let shortcut = egui::KeyboardShortcut::new(*mods, *key);
+            if ctx.input_mut(|i| i.consume_shortcut(&shortcut)) {
+                self.apply_shortcut_action(action);
+            }
+        }
+    }
+
+    fn apply_shortcut_action(&mut self, action: &ShortcutAction) {
+        match action {
+            ShortcutAction::ResetZoom => self.viewer.set_zoom(ZoomState::Discrete(1.0)),
+            ShortcutAction::FitWidth => self.viewer.set_zoom(ZoomState::FitWidth),
+            ShortcutAction::FitPage => self.viewer.set_zoom(ZoomState::FitPage),
+            ShortcutAction::ZoomIn => {
+                let z = zoom_ui::step_zoom_up(self.viewer.zoom());
+                self.viewer.set_zoom(z);
+            }
+            ShortcutAction::ZoomOut => {
+                let z = zoom_ui::step_zoom_down(self.viewer.zoom());
+                self.viewer.set_zoom(z);
+            }
+            ShortcutAction::FocusPageInput => self.page_input_focused = true,
+        }
+    }
 }
 
 impl eframe::App for DemoApp {
@@ -244,30 +323,7 @@ impl eframe::App for DemoApp {
         #[cfg(target_arch = "wasm32")]
         self.poll_pending_bytes();
 
-        ui.input(|i| {
-            if i.modifiers.ctrl {
-                if i.key_pressed(egui::Key::Num0) {
-                    self.viewer.set_zoom(ZoomState::Discrete(1.0));
-                }
-                if i.key_pressed(egui::Key::Num1) {
-                    self.viewer.set_zoom(ZoomState::FitWidth);
-                }
-                if i.key_pressed(egui::Key::Num2) {
-                    self.viewer.set_zoom(ZoomState::FitPage);
-                }
-                if i.key_pressed(egui::Key::Plus) || i.key_pressed(egui::Key::Equals) {
-                    let z = step_zoom_up(self.viewer.zoom());
-                    self.viewer.set_zoom(z);
-                }
-                if i.key_pressed(egui::Key::Minus) {
-                    let z = step_zoom_down(self.viewer.zoom());
-                    self.viewer.set_zoom(z);
-                }
-                if i.key_pressed(egui::Key::G) {
-                    self.page_input_focused = true;
-                }
-            }
-        });
+        self.handle_shortcuts(ui.ctx());
 
         egui::Panel::top("demo_controls").show_inside(ui, |ui| {
             #[cfg(not(target_arch = "wasm32"))]
@@ -281,32 +337,13 @@ impl eframe::App for DemoApp {
 
                 ui.separator();
 
-                if ui.button("−").clicked() {
-                    let new_zoom = step_zoom_down(self.viewer.zoom());
-                    self.viewer.set_zoom(new_zoom);
-                }
-
-                let current_label = zoom_label(self.viewer.zoom());
-                egui::ComboBox::from_id_salt("zoom_combo")
-                    .selected_text(current_label)
-                    .show_ui(ui, |ui| {
-                        for (label, zoom) in zoom_levels() {
-                            if ui.selectable_label(false, label).clicked() {
-                                self.viewer.set_zoom(zoom);
-                            }
-                        }
-                    });
-
-                if ui.button("+").clicked() {
-                    let new_zoom = step_zoom_up(self.viewer.zoom());
-                    self.viewer.set_zoom(new_zoom);
-                }
+                zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
             });
 
             #[cfg(target_arch = "wasm32")]
             ui.horizontal(|ui| {
                 let response = ui.add(
-                    egui::TextEdit::singleline(&mut self.url_input)
+                    egui::TextEdit::singleline(&mut self.wasm_state.url_input)
                         .hint_text("https://example.com/document.pdf")
                         .desired_width(f32::INFINITY),
                 );
@@ -315,13 +352,13 @@ impl eframe::App for DemoApp {
                         && ui.input(|input| input.key_pressed(egui::Key::Enter)));
 
                 if should_load {
-                    let url = self.url_input.trim().to_owned();
+                    let url = self.wasm_state.url_input.trim().to_owned();
                     if url.is_empty() {
                         self.viewer.clear();
                         self.debug_info = None;
-                        self.load_state = DemoLoadState::Failed {
-                            msg: "Enter a PDF URL before loading.".to_owned(),
-                        };
+                        self.transition(LoadEvent::LoadFailed {
+                            message: "Enter a PDF URL before loading.".to_owned(),
+                        });
                     } else {
                         self.start_fetch(ui.ctx(), url);
                     }
@@ -329,26 +366,7 @@ impl eframe::App for DemoApp {
 
                 ui.separator();
 
-                if ui.button("−").clicked() {
-                    let new_zoom = step_zoom_down(self.viewer.zoom());
-                    self.viewer.set_zoom(new_zoom);
-                }
-
-                let current_label = zoom_label(self.viewer.zoom());
-                egui::ComboBox::from_id_salt("zoom_combo")
-                    .selected_text(current_label)
-                    .show_ui(ui, |ui| {
-                        for (label, zoom) in zoom_levels() {
-                            if ui.selectable_label(false, label).clicked() {
-                                self.viewer.set_zoom(zoom);
-                            }
-                        }
-                    });
-
-                if ui.button("+").clicked() {
-                    let new_zoom = step_zoom_up(self.viewer.zoom());
-                    self.viewer.set_zoom(new_zoom);
-                }
+                zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
             });
         });
 
@@ -529,62 +547,4 @@ fn call_initialize_pdfium_render() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn zoom_levels() -> [(&'static str, ZoomState); 11] {
-    [
-        ("25%", ZoomState::Discrete(0.25)),
-        ("50%", ZoomState::Discrete(0.50)),
-        ("75%", ZoomState::Discrete(0.75)),
-        ("100%", ZoomState::Discrete(1.0)),
-        ("125%", ZoomState::Discrete(1.25)),
-        ("150%", ZoomState::Discrete(1.50)),
-        ("200%", ZoomState::Discrete(2.0)),
-        ("300%", ZoomState::Discrete(3.0)),
-        ("400%", ZoomState::Discrete(4.0)),
-        ("Fit Width", ZoomState::FitWidth),
-        ("Fit Page", ZoomState::FitPage),
-    ]
-}
-
-fn zoom_label(zoom: ZoomState) -> &'static str {
-    match zoom {
-        ZoomState::Discrete(z) if (z - 0.25).abs() < 0.01 => "25%",
-        ZoomState::Discrete(z) if (z - 0.50).abs() < 0.01 => "50%",
-        ZoomState::Discrete(z) if (z - 0.75).abs() < 0.01 => "75%",
-        ZoomState::Discrete(z) if (z - 1.0).abs() < 0.01 => "100%",
-        ZoomState::Discrete(z) if (z - 1.25).abs() < 0.01 => "125%",
-        ZoomState::Discrete(z) if (z - 1.5).abs() < 0.01 => "150%",
-        ZoomState::Discrete(z) if (z - 2.0).abs() < 0.01 => "200%",
-        ZoomState::Discrete(z) if (z - 3.0).abs() < 0.01 => "300%",
-        ZoomState::Discrete(z) if (z - 4.0).abs() < 0.01 => "400%",
-        ZoomState::FitWidth => "Fit Width",
-        ZoomState::FitPage => "Fit Page",
-        _ => "Custom",
-    }
-}
-
-fn step_zoom_up(current: ZoomState) -> ZoomState {
-    let z = match current {
-        ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
-        ZoomState::FitWidth | ZoomState::FitPage => 1.0,
-    };
-    let next = DISCRETE_LEVELS
-        .iter()
-        .find(|&&level| level > z + 0.01)
-        .copied();
-    ZoomState::Discrete(next.unwrap_or(4.0))
-}
-
-fn step_zoom_down(current: ZoomState) -> ZoomState {
-    let z = match current {
-        ZoomState::Discrete(z) | ZoomState::Custom(z) => z,
-        ZoomState::FitWidth | ZoomState::FitPage => 1.0,
-    };
-    let previous = DISCRETE_LEVELS
-        .iter()
-        .rev()
-        .find(|&&level| level < z - 0.01)
-        .copied();
-    ZoomState::Discrete(previous.unwrap_or(0.25))
 }
