@@ -1,3 +1,7 @@
+//! Benchmarks for large-document parse and raster performance.
+// justify: criterion macro expands helper items that do not need docs in this bench crate.
+#![allow(missing_docs)]
+
 use criterion::{Criterion, criterion_group, criterion_main};
 use viewkai_core::page::PageIndex;
 
@@ -10,7 +14,7 @@ fn bench_parse_500_page_doc(c: &mut Criterion) {
             let doc = viewkai_engine::Document::from_bytes(bytes.clone())
                 .expect("should open 500page.pdf");
             criterion::black_box(doc.page_count())
-        })
+        });
     });
 }
 
@@ -24,7 +28,7 @@ fn bench_rasterize_page_at_150dpi(c: &mut Criterion) {
             let raw =
                 viewkai_engine::render_page(&doc, PageIndex(0), 150).expect("should render page");
             criterion::black_box(raw.pixels.len())
-        })
+        });
     });
 }
 

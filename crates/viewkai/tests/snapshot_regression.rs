@@ -1,3 +1,5 @@
+//! Snapshot regression tests for core viewer states.
+
 use egui_kittest::Harness;
 use viewkai::Viewer;
 use viewkai::zoom::ZoomState;

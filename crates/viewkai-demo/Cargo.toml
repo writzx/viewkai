@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Demo app for viewkai — native + WASM"
+readme = "../../README.md"
+keywords = ["pdf", "egui", "viewer", "demo", "wasm"]
+categories = ["gui", "rendering", "wasm"]
 
 [[bin]]
 name = "viewkai-demo"

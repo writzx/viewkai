@@ -7,7 +7,7 @@ use viewkai_engine::error::EngineError;
 /// Follows Rust API Guidelines C-GOOD-ERR: structured, meaningful variants.
 #[derive(Debug, Clone)]
 pub enum LoadError {
-    /// An error from the underlying PDFium engine.
+    /// An error from the underlying `PDFium` engine.
     Engine(EngineError),
 
     /// The byte slice could not be parsed as a valid PDF.

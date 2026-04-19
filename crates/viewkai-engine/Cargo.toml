@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "PDFium rendering engine for viewkai"
+readme = "../../README.md"
+keywords = ["pdf", "pdfium", "rendering", "viewer", "wasm"]
+categories = ["graphics", "rendering", "wasm"]
 
 [dependencies]
 viewkai-core = { path = "../viewkai-core" }

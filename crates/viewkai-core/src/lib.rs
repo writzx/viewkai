@@ -1,8 +1,15 @@
+//! Shared value types and errors for the viewkai workspace.
+
+/// Canonical crate name for the shared core types crate.
 pub const NAME: &str = "viewkai-core";
 
+/// Coordinate-space value types.
 pub mod coord;
+/// Common error types used across the workspace.
 pub mod error;
+/// Page identifiers and dimensions.
 pub mod page;
+/// Rendering output value types.
 pub mod render;
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! PDFium rendering engine for viewkai.
+//! `PDFium` rendering engine for viewkai.
 //!
 //! # Design
 //!
@@ -13,6 +13,7 @@
 //!   falling back to the vendor path at `<workspace>/vendor/pdfium/{platform}/libpdfium.{ext}`.
 //! - **WASM:** expects `initialize_pdfium_render()` already called from JavaScript.
 
+/// Canonical crate name for the rendering engine crate.
 pub const NAME: &str = "viewkai-engine";
 
 pub mod error;
@@ -30,14 +31,14 @@ use viewkai_core::{
 static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
 static PDFIUM_INIT_LOCK: Mutex<()> = Mutex::new(());
 
-/// Initialise the PDFium library.
+/// Initialise the `PDFium` library.
 ///
 /// Must be called once before [`Document::from_bytes`]. Safe to call multiple
 /// times; subsequent calls are no-ops.
 ///
 /// # Errors
 ///
-/// Returns an error if the pdfium library cannot be found/loaded (native only).
+/// Returns an error if the `PDFium` library cannot be found or loaded (native only).
 /// On WASM this will error if `initialize_pdfium_render()` has not been called
 /// from JavaScript yet.
 pub fn init() -> Result<()> {
@@ -123,6 +124,14 @@ impl Document {
     /// Returns [`EngineError::NotInitialised`] if [`init()`] has not been called,
     /// or [`EngineError::InvalidPdf`] / [`EngineError::Pdfium`] if the bytes
     /// cannot be parsed.
+    // justify: `pdfium-render` exposes page counts and page indices as signed
+    // integers; these conversions stay within range because they originate from
+    // `doc.pages().len()` and are reused only while iterating that exact count.
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )]
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
         let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
 
@@ -158,6 +167,7 @@ impl Document {
     }
 
     /// Total number of pages.
+    #[must_use]
     pub fn page_count(&self) -> usize {
         self.page_count
     }
@@ -167,6 +177,9 @@ impl Document {
     /// # Errors
     ///
     /// Returns [`EngineError::PageIndexOutOfBounds`] if `idx` ≥ `page_count()`.
+    // justify: `EngineError::PageIndexOutOfBounds` stores `u32` values and the
+    // engine's `usize` counts are constrained by `pdfium-render` page indexing.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn page_size(&self, idx: PageIndex) -> Result<PageSize> {
         self.page_sizes
             .get(idx.0)
@@ -178,6 +191,7 @@ impl Document {
     }
 
     /// Raw PDF bytes — for internal use by the renderer (viewkai crate).
+    #[must_use]
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
@@ -193,6 +207,15 @@ impl Document {
 ///
 /// Returns [`EngineError::NotInitialised`] if [`init()`] has not been called.
 /// Returns [`EngineError::PageIndexOutOfBounds`] if `idx >= doc.page_count()`.
+// justify: `pdfium-render`'s render API requires signed pixel/index types and
+// the conversion points are bounded by `PDFium` page sizes and caller-provided
+// DPI values in the viewer's fixed zoom buckets.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
 pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
     let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
 

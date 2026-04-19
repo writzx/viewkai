@@ -1,3 +1,7 @@
+//! Acceptance test covering `TextureCache` budget behavior during scrolling.
+// justify: test output keeps explicit formatting and bounded byte-to-MB casts.
+#![allow(clippy::cast_precision_loss, clippy::uninlined_format_args)]
+
 use egui::Vec2;
 use egui_kittest::Harness;
 use viewkai::Viewer;

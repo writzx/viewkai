@@ -14,11 +14,11 @@ use thiserror::Error;
 /// [`EngineError::Pdfium`] with a stringified message.
 #[derive(Debug, Clone, Error)]
 pub enum EngineError {
-    /// PDFium library not initialised; call [`crate::init()`] first.
+    /// `PDFium` library not initialised; call [`crate::init()`] first.
     #[error("pdfium not initialised; call viewkai_engine::init() first")]
     NotInitialised,
 
-    /// Failed to load PDFium bindings from the given path.
+    /// Failed to load `PDFium` bindings from the given path.
     #[error("failed to load PDFium bindings: {0}")]
     BindingsLoad(String),
 

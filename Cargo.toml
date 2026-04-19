@@ -29,3 +29,7 @@ cargo = { level = "warn", priority = -1 }
 # Targeted allows (documented inline, each with justification)
 module_name_repetitions = "allow"  # idiomatic in small domain modules (cache::CacheEntry)
 missing_errors_doc = "allow"       # temporarily allowed; Phase B/C tightens per-function
+cast_precision_loss = "allow"      # tests/bench display helpers and zoom math use bounded values
+redundant_closure_for_method_calls = "allow" # test poison handling closures stay explicit and readable
+semicolon_if_nothing_returned = "allow" # criterion benches prefer expression-style closures
+uninlined_format_args = "allow"    # existing acceptance tests keep stable explicit formatting strings

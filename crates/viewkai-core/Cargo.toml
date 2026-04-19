@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Core types, errors, and coordinate math for viewkai"
+readme = "../../README.md"
+keywords = ["pdf", "egui", "viewer", "types", "wasm"]
+categories = ["data-structures", "gui", "wasm"]
 
 [dependencies]
 thiserror = { workspace = true }

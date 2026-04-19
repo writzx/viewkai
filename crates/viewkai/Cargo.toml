@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Rust PDF viewer library targeting wasm32 and native, built on pdfium-render and egui"
+readme = "../../README.md"
+keywords = ["pdf", "egui", "viewer", "wasm", "gui"]
+categories = ["gui", "rendering", "wasm"]
 
 [dependencies]
 viewkai-core = { path = "../viewkai-core" }

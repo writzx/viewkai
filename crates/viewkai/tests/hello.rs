@@ -1,3 +1,5 @@
+//! Smoke test for loading and rendering the hello fixture PDF.
+
 use egui_kittest::Harness;
 use viewkai::Viewer;
 

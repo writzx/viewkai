@@ -8,7 +8,9 @@ use viewkai_core::page::PageIndex;
 /// Cache key: page index + zoom bucket (DPI tier).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CacheKey {
+    /// Zero-based page index of the cached render.
     pub page_idx: PageIndex,
+    /// Quantized zoom bucket used for the cached render.
     pub zoom_bucket: u8,
 }
 
@@ -34,6 +36,7 @@ impl TextureCache {
     pub const DEFAULT_BUDGET: usize = 256 * 1024 * 1024;
 
     /// Create a new cache with the given byte budget.
+    #[must_use]
     pub fn new(budget_bytes: usize) -> Self {
         Self {
             entries: HashMap::new(),
@@ -43,11 +46,13 @@ impl TextureCache {
     }
 
     /// Create a cache with the default 256 MB budget.
+    #[must_use]
     pub fn default_budget() -> Self {
         Self::new(Self::DEFAULT_BUDGET)
     }
 
     /// Total bytes currently held in the cache.
+    #[must_use]
     pub fn total_bytes(&self) -> usize {
         self.total_bytes
     }

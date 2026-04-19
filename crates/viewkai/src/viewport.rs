@@ -31,6 +31,7 @@ pub struct VisibilityTracker {
 
 impl VisibilityTracker {
     /// Create a tracker with the given prefetch distance (default: 2).
+    #[must_use]
     pub fn new(prefetch_distance: usize) -> Self {
         Self { prefetch_distance }
     }
@@ -42,6 +43,11 @@ impl VisibilityTracker {
     /// - `viewport_height`: height of the visible area in pixels
     /// - `page_tops`: y-coordinate of the top of each page (in pixels, cumulative)
     /// - `page_heights`: height of each page in pixels
+    ///
+    /// # Panics
+    ///
+    /// Panics if `page_tops.len() != page_heights.len()`.
+    #[must_use]
     pub fn compute(
         &self,
         scroll_offset_y: f32,
@@ -101,6 +107,9 @@ mod tests {
         VisibilityTracker::new(2)
     }
 
+    // justify: test inputs are tiny fixture counts, so converting indices to
+    // `f32` cannot lose meaningful precision here.
+    #[allow(clippy::cast_precision_loss)]
     fn uniform_layout(count: usize, height: f32) -> (Vec<f32>, Vec<f32>) {
         let tops = (0..count).map(|i| i as f32 * height).collect();
         let heights = vec![height; count];

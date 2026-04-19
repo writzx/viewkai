@@ -8,12 +8,15 @@ pub enum Error {
     Engine(String),
 
     #[error("document not loaded")]
+    /// No document is currently loaded.
     NotLoaded,
 
     #[error("page index out of range: {0}")]
+    /// A requested page index exceeded the loaded document range.
     PageOutOfRange(usize),
 
     #[error("invalid PDF data")]
+    /// The supplied bytes could not be parsed as a PDF.
     InvalidPdf,
 }
 

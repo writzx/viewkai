@@ -11,11 +11,14 @@
 //! // viewer.show(ui);
 //! ```
 
+#![warn(missing_docs)]
+
 pub mod cache;
 pub mod error;
 pub mod viewport;
 pub mod zoom;
 
+/// Canonical crate name exposed for embedding integrations.
 pub const NAME: &str = "viewkai";
 
 use crate::cache::{CacheKey, TextureCache};
@@ -81,6 +84,7 @@ impl Default for Viewer {
 
 impl Viewer {
     /// Create a new, empty viewer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             state: ViewerState::Empty,
@@ -89,10 +93,13 @@ impl Viewer {
         }
     }
 
+    /// Set the active zoom mode for subsequent renders.
     pub fn set_zoom(&mut self, zoom: ZoomState) {
         self.render.zoom = zoom;
     }
 
+    /// Return the currently configured zoom mode.
+    #[must_use]
     pub fn zoom(&self) -> ZoomState {
         self.render.zoom
     }
@@ -112,7 +119,7 @@ impl Viewer {
     /// # Errors
     ///
     /// Returns an error if the bytes cannot be parsed as a PDF, or if the
-    /// PDFium engine has not been initialised (call [`viewkai_engine::init()`]
+    /// `PDFium` engine has not been initialised (call [`viewkai_engine::init()`]
     /// first).
     pub fn load_bytes(&mut self, bytes: Vec<u8>) -> Result<(), LoadError> {
         match Document::from_bytes(bytes) {
@@ -160,6 +167,7 @@ impl Viewer {
     }
 
     /// Returns the number of pages in the loaded document, or 0 if no document is loaded.
+    #[must_use]
     pub fn page_count(&self) -> usize {
         match &self.state {
             ViewerState::Loaded { pages, .. } => pages.len(),
@@ -168,11 +176,13 @@ impl Viewer {
     }
 
     /// Returns the total bytes currently held in the texture cache.
+    #[must_use]
     pub fn cache_bytes(&self) -> usize {
         self.render.cache.total_bytes()
     }
 
     /// Returns the page size in PDF points for the given index, if loaded.
+    #[must_use]
     pub fn page_size_pt(&self, idx: usize) -> Option<Vec2> {
         match &self.state {
             ViewerState::Loaded { pages, .. } => pages.get(idx).map(|page| page.size_pt),
@@ -301,11 +311,10 @@ impl Viewer {
                 let db = (*b - center_y).abs();
                 da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
             })
-            .map(|(i, _)| i)
-            .unwrap_or(0);
+            .map_or(0, |(i, _)| i);
 
         let mut to_render: Vec<usize> = vis_set.all_to_render().map(|page| page.0).collect();
-        to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
+        to_render.sort_by_key(|&idx| idx.abs_diff(center_page));
         to_render
     }
 
@@ -324,24 +333,27 @@ impl Viewer {
                 zoom_bucket,
             };
 
-            if cache.get(&key, now).is_none() {
-                if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi) {
-                    let byte_size = raw.pixels.len();
-                    let image = egui::ColorImage::from_rgba_unmultiplied(
-                        [raw.width as usize, raw.height as usize],
-                        &raw.pixels,
-                    );
-                    let handle = ui.ctx().load_texture(
-                        format!("viewkai/page/{idx}/dpi{dpi}"),
-                        image,
-                        TextureOptions::LINEAR,
-                    );
-                    cache.insert(key, handle, byte_size, now);
-                }
+            if cache.get(&key, now).is_none()
+                && let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi)
+            {
+                let byte_size = raw.pixels.len();
+                let image = egui::ColorImage::from_rgba_unmultiplied(
+                    [raw.width as usize, raw.height as usize],
+                    &raw.pixels,
+                );
+                let handle = ui.ctx().load_texture(
+                    format!("viewkai/page/{idx}/dpi{dpi}"),
+                    image,
+                    TextureOptions::LINEAR,
+                );
+                cache.insert(key, handle, byte_size, now);
             }
         }
     }
 
+    // justify: this helper keeps page painting snapshot-stable by accepting the
+    // already-computed render inputs directly instead of introducing a new struct.
+    #[allow(clippy::too_many_arguments)]
     fn paint_pages(
         ui: &mut egui::Ui,
         pages: &[PageState],
@@ -386,7 +398,7 @@ impl Viewer {
                         page_idx: PageIndex(idx),
                         zoom_bucket: bucket,
                     };
-                    cache.get(&fallback_key, now).map(|texture| texture.id())
+                    cache.get(&fallback_key, now).map(egui::TextureHandle::id)
                 });
 
                 if let Some(tex_id) = fallback {
@@ -411,17 +423,19 @@ impl Viewer {
         pending_scroll: &mut Option<usize>,
         page_tops: &[f32],
     ) {
-        if let Some(target_idx) = pending_scroll.take() {
-            if let Some(&top) = page_tops.get(target_idx) {
-                ui.scroll_to_rect(
-                    Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
-                    Some(egui::Align::TOP),
-                );
-            }
+        if let Some(target_idx) = pending_scroll.take()
+            && let Some(&top) = page_tops.get(target_idx)
+        {
+            ui.scroll_to_rect(
+                Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
+                Some(egui::Align::TOP),
+            );
         }
     }
 }
 
+/// Return the canonical crate name.
+#[must_use]
 pub fn library_name() -> &'static str {
     NAME
 }

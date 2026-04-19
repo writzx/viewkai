@@ -1,3 +1,5 @@
+//! Integration tests covering `Viewer` state transitions.
+
 use egui_kittest::{Harness, kittest::Queryable};
 use std::sync::{Mutex, OnceLock};
 use viewkai::Viewer;
@@ -12,7 +14,7 @@ fn test_lock() -> &'static Mutex<()> {
 fn viewer_empty_state_renders_placeholder() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let viewer = Viewer::new();
@@ -32,7 +34,7 @@ fn viewer_empty_state_renders_placeholder() {
 fn viewer_error_state_surfaces_and_retries() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let mut viewer = Viewer::new();
@@ -58,7 +60,7 @@ fn viewer_error_state_surfaces_and_retries() {
 fn viewer_scroll_to_page_advances_layout() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/500page.pdf").to_vec();
@@ -88,7 +90,7 @@ fn viewer_scroll_to_page_advances_layout() {
 fn viewer_zoom_setter_roundtrips() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
@@ -128,7 +130,7 @@ fn viewer_zoom_setter_roundtrips() {
 fn viewer_loaded_state_renders_pages() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
@@ -156,7 +158,7 @@ fn viewer_loaded_state_renders_pages() {
 fn viewer_clear_resets_to_empty() {
     let _guard = test_lock()
         .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     viewkai_engine::init().expect("Failed to initialize PDFium");
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
