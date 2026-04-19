@@ -20,3 +20,6 @@ egui_kittest = { version = "0.34", features = ["wgpu", "snapshot", "eframe"] }
 [[bench]]
 name = "large_doc"
 harness = false
+
+[lints]
+workspace = true

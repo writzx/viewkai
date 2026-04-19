@@ -30,3 +30,6 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlC
 
 [dev-dependencies]
 egui_kittest = { version = "0.34", features = ["wgpu", "snapshot", "eframe"] }
+
+[lints]
+workspace = true

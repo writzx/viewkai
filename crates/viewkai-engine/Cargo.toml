@@ -13,3 +13,6 @@ pdfium-render = { workspace = true, features = ["pdfium_latest", "image_latest"]
 
 [dev-dependencies]
 serde_json = { workspace = true }
+
+[lints]
+workspace = true
