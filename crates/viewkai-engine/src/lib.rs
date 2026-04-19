@@ -20,7 +20,10 @@ pub mod error;
 
 use crate::error::{EngineError, Result};
 use pdfium_render::prelude::*;
-use std::sync::{Mutex, OnceLock};
+use std::{
+    pin::Pin,
+    sync::{Mutex, OnceLock},
+};
 use viewkai_core::{
     page::{PageIndex, PageSize},
     render::RawImage,
@@ -102,13 +105,20 @@ fn create_bindings() -> Result<Box<dyn PdfiumLibraryBindings>> {
 
 /// An opened PDF document.
 ///
-/// Owns the original byte buffer. Page metadata (count and sizes) is parsed at
-/// construction time; re-rendering in later stages re-uses the stored bytes.
+/// Owns the original byte buffer and the live `PdfDocument`. Page metadata
+/// (count and sizes) is parsed at construction time; later rendering re-uses
+/// the cached document instead of re-parsing the PDF bytes.
 ///
 /// All `pdfium-render` types are private to this crate.
 pub struct Document {
-    /// Original PDF bytes (used by the renderer in later plan stages).
-    bytes: Vec<u8>,
+    /// SAFETY CRITICAL — see SAFETY comment on `Document::from_bytes`.
+    /// `pdf` MUST be declared first: Rust drops fields in declaration order,
+    /// so `pdf` drops before `bytes`, ensuring the backing memory is still
+    /// valid when `PdfDocument`'s destructor runs.
+    pdf: PdfDocument<'static>,
+    /// Heap-pinned owner of the raw PDF bytes. Must outlive `pdf` above.
+    /// Never accessed directly after `Document::from_bytes` returns.
+    bytes: Pin<Box<[u8]>>,
     page_count: usize,
     page_sizes: Vec<PageSize>,
 }
@@ -135,35 +145,75 @@ impl Document {
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
         let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
 
-        let (count, sizes) = {
-            let doc = pdfium
+        // Pin the bytes on the heap so their address is stable for the lifetime
+        // of this `Document`.
+        let bytes: Pin<Box<[u8]>> = Pin::new(bytes.into_boxed_slice());
+
+        let pdf: PdfDocument<'static> = {
+            let loaded = pdfium
                 .load_pdf_from_byte_slice(&bytes, None)
                 .map_err(|_| EngineError::InvalidPdf)?;
 
-            let count = doc.pages().len() as usize;
-            let sizes = (0..count)
-                .map(|i| {
-                    let page =
-                        doc.pages()
-                            .get(i as PdfPageIndex)
-                            .map_err(|e| EngineError::Pdfium {
-                                message: e.to_string(),
-                            })?;
-                    Ok(PageSize {
-                        width_pt: page.width().value,
-                        height_pt: page.height().value,
-                    })
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            (count, sizes)
+            // SAFETY:
+            // 1. `PdfDocument<'a>` is tied to the `Pdfium` bindings lifetime. The
+            //    bindings live in `static PDFIUM: OnceLock<Pdfium>`, so the bindings
+            //    side of the borrow graph is process-lifetime and outlives every
+            //    `Document` created by this crate.
+            //
+            // 2. The byte-slice loader also ties `'a` to the provided byte
+            //    slice. We satisfy that requirement by first moving the bytes into
+            //    `Pin<Box<[u8]>>`. The heap allocation stays at a stable address even
+            //    if the outer `Document` moves, so Pdfium never observes relocated
+            //    backing storage.
+            //
+            // 3. The pinned byte owner is stored in the same `Document` as the
+            //    widened `PdfDocument<'static>`. We never mutate, resize, or replace
+            //    that boxed slice after the document is opened, so the memory stays
+            //    valid for the full logical lifetime of `pdf`.
+            //
+            // 4. Field order is load-bearing: `pdf` is declared before `bytes`, and
+            //    Rust drops struct fields in declaration order. `pdf` therefore drops
+            //    before `bytes`, so any final Pdfium reads during `PdfDocument::drop()`
+            //    still see valid backing memory. Reordering the fields would break
+            //    this safety argument and would be unsound.
+            //
+            // 5. No widened `'static` borrow escapes the public API. The transmute is
+            //    used only so this self-referential storage pattern compiles; callers
+            //    can access page data only through borrows derived from `&self`, which
+            //    cannot outlive the owning `Document`.
+            unsafe {
+                std::mem::transmute::<
+                    PdfDocument<'_>,
+                    PdfDocument<'static>,
+                >(loaded)
+            }
         };
 
+        let count = pdf.pages().len() as usize;
+        let sizes = (0..count)
+            .map(|i| {
+                let page = pdf.pages().get(i as PdfPageIndex).map_err(|e| EngineError::Pdfium {
+                    message: e.to_string(),
+                })?;
+                Ok(PageSize {
+                    width_pt: page.width().value,
+                    height_pt: page.height().value,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
         Ok(Self {
+            pdf,
             bytes,
             page_count: count,
             page_sizes: sizes,
         })
+    }
+
+    fn render_config() -> &'static Mutex<PdfRenderConfig> {
+        static CFG: OnceLock<Mutex<PdfRenderConfig>> = OnceLock::new();
+
+        CFG.get_or_init(|| Mutex::new(PdfRenderConfig::new()))
     }
 
     /// Total number of pages.
@@ -199,13 +249,11 @@ impl Document {
 
 /// Render a single page to an RGBA image at the given DPI.
 ///
-/// Opens the document from its stored bytes, renders the page, and returns
-/// the raw RGBA pixel buffer. The document is re-opened each call; for
-/// repeated rendering, the caller should cache the result.
+/// Reuses the opened document, renders the page, and returns the raw RGBA
+/// pixel buffer.
 ///
 /// # Errors
 ///
-/// Returns [`EngineError::NotInitialised`] if [`init()`] has not been called.
 /// Returns [`EngineError::PageIndexOutOfBounds`] if `idx >= doc.page_count()`.
 // justify: `pdfium-render`'s render API requires signed pixel/index types and
 // the conversion points are bounded by `PDFium` page sizes and caller-provided
@@ -217,15 +265,8 @@ impl Document {
     clippy::cast_sign_loss
 )]
 pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
-    let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
-
-    let pdf_doc = pdfium
-        .load_pdf_from_byte_slice(doc.bytes(), None)
-        .map_err(|e| EngineError::Pdfium {
-            message: e.to_string(),
-        })?;
-
-    let page = pdf_doc
+    let page = doc
+        .pdf
         .pages()
         .get(idx.0 as PdfPageIndex)
         .map_err(|e| match e {
@@ -242,8 +283,14 @@ pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage>
     let width = (page.width().value * scale).round() as Pixels;
     let height = (page.height().value * scale).round() as Pixels;
 
+    let mut config = Document::render_config()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    *config = PdfRenderConfig::new()
+        .set_target_width(width)
+        .set_target_height(height);
     let bitmap = page
-        .render(width, height, None)
+        .render_with_config(&config)
         .map_err(|e| EngineError::Pdfium {
             message: e.to_string(),
         })?;
