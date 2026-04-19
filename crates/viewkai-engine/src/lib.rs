@@ -15,10 +15,12 @@
 
 pub const NAME: &str = "viewkai-engine";
 
+pub mod error;
+
+use crate::error::{EngineError, Result};
 use pdfium_render::prelude::*;
 use std::sync::{Mutex, OnceLock};
 use viewkai_core::{
-    error::{Error, Result},
     page::{PageIndex, PageSize},
     render::RawImage,
 };
@@ -45,7 +47,7 @@ pub fn init() -> Result<()> {
 
     let _guard = PDFIUM_INIT_LOCK
         .lock()
-        .map_err(|e| Error::Pdfium(format!("pdfium init lock poisoned: {e}")))?;
+        .map_err(|_| EngineError::InitLockPoisoned)?;
 
     if PDFIUM.get().is_some() {
         return Ok(());
@@ -61,7 +63,7 @@ pub fn init() -> Result<()> {
 fn create_bindings() -> Result<Box<dyn PdfiumLibraryBindings>> {
     if let Ok(path) = std::env::var("PDFIUM_DYLIB_PATH") {
         return Pdfium::bind_to_library(&path)
-            .map_err(|e| Error::Pdfium(format!("PDFIUM_DYLIB_PATH={path}: {e}")));
+            .map_err(|e| EngineError::BindingsLoad(format!("PDFIUM_DYLIB_PATH={path}: {e}")));
     }
 
     let vendor_path = vendor_pdfium_path();
@@ -70,7 +72,7 @@ fn create_bindings() -> Result<Box<dyn PdfiumLibraryBindings>> {
     }
 
     Pdfium::bind_to_system_library()
-        .map_err(|e| Error::Pdfium(format!("system pdfium not found: {e}")))
+        .map_err(|e| EngineError::BindingsLoad(format!("system pdfium not found: {e}")))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -92,7 +94,7 @@ fn vendor_pdfium_path() -> String {
 #[cfg(target_arch = "wasm32")]
 fn create_bindings() -> Result<Box<dyn PdfiumLibraryBindings>> {
     Pdfium::bind_to_system_library()
-        .map_err(|e| Error::Pdfium(format!("WASM pdfium not ready: {e}")))
+        .map_err(|e| EngineError::BindingsLoad(format!("WASM pdfium not ready: {e}")))
 }
 
 // ── Document ─────────────────────────────────────────────────────────────────
@@ -118,23 +120,26 @@ impl Document {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::NotLoaded`] if [`init()`] has not been called, or
-    /// [`Error::InvalidPdf`] / [`Error::Pdfium`] if the bytes cannot be parsed.
+    /// Returns [`EngineError::NotInitialised`] if [`init()`] has not been called,
+    /// or [`EngineError::InvalidPdf`] / [`EngineError::Pdfium`] if the bytes
+    /// cannot be parsed.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
-        let pdfium = PDFIUM.get().ok_or(Error::NotLoaded)?;
+        let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
 
         let (count, sizes) = {
             let doc = pdfium
                 .load_pdf_from_byte_slice(&bytes, None)
-                .map_err(|_| Error::InvalidPdf)?;
+                .map_err(|_| EngineError::InvalidPdf)?;
 
             let count = doc.pages().len() as usize;
             let sizes = (0..count)
                 .map(|i| {
-                    let page = doc
-                        .pages()
-                        .get(i as PdfPageIndex)
-                        .map_err(|e| Error::Pdfium(e.to_string()))?;
+                    let page =
+                        doc.pages()
+                            .get(i as PdfPageIndex)
+                            .map_err(|e| EngineError::Pdfium {
+                                message: e.to_string(),
+                            })?;
                     Ok(PageSize {
                         width_pt: page.width().value,
                         height_pt: page.height().value,
@@ -161,12 +166,15 @@ impl Document {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::PageOutOfRange`] if `idx` ≥ `page_count()`.
+    /// Returns [`EngineError::PageIndexOutOfBounds`] if `idx` ≥ `page_count()`.
     pub fn page_size(&self, idx: PageIndex) -> Result<PageSize> {
         self.page_sizes
             .get(idx.0)
             .copied()
-            .ok_or(Error::PageOutOfRange(idx.0))
+            .ok_or(EngineError::PageIndexOutOfBounds {
+                index: idx.0 as u32,
+                count: self.page_count as u32,
+            })
     }
 
     /// Raw PDF bytes — for internal use by the renderer (viewkai crate).
@@ -183,21 +191,28 @@ impl Document {
 ///
 /// # Errors
 ///
-/// Returns [`Error::NotLoaded`] if [`init()`] has not been called.
-/// Returns [`Error::PageOutOfRange`] if `idx >= doc.page_count()`.
+/// Returns [`EngineError::NotInitialised`] if [`init()`] has not been called.
+/// Returns [`EngineError::PageIndexOutOfBounds`] if `idx >= doc.page_count()`.
 pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
-    let pdfium = PDFIUM.get().ok_or(Error::NotLoaded)?;
+    let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
 
     let pdf_doc = pdfium
         .load_pdf_from_byte_slice(doc.bytes(), None)
-        .map_err(|e| Error::Pdfium(e.to_string()))?;
+        .map_err(|e| EngineError::Pdfium {
+            message: e.to_string(),
+        })?;
 
     let page = pdf_doc
         .pages()
         .get(idx.0 as PdfPageIndex)
         .map_err(|e| match e {
-            PdfiumError::PageIndexOutOfBounds => Error::PageOutOfRange(idx.0),
-            _ => Error::Pdfium(e.to_string()),
+            PdfiumError::PageIndexOutOfBounds => EngineError::PageIndexOutOfBounds {
+                index: idx.0 as u32,
+                count: doc.page_count() as u32,
+            },
+            _ => EngineError::Pdfium {
+                message: e.to_string(),
+            },
         })?;
 
     let scale = dpi as f32 / 72.0;
@@ -206,7 +221,9 @@ pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage>
 
     let bitmap = page
         .render(width, height, None)
-        .map_err(|e| Error::Pdfium(e.to_string()))?;
+        .map_err(|e| EngineError::Pdfium {
+            message: e.to_string(),
+        })?;
 
     let pixels = bitmap.as_rgba_bytes();
 

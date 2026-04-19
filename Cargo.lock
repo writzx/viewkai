@@ -3987,6 +3987,7 @@ version = "0.0.4"
 dependencies = [
  "pdfium-render",
  "serde_json",
+ "thiserror 2.0.18",
  "viewkai-core",
 ]
 

@@ -22,7 +22,10 @@ use crate::viewport::VisibilityTracker;
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 use std::sync::Arc;
-use viewkai_core::{error::Result, page::PageIndex};
+use viewkai_core::{
+    error::{Error, Result},
+    page::PageIndex,
+};
 use viewkai_engine::Document;
 
 /// Per-page rendering state.
@@ -121,8 +124,9 @@ impl Viewer {
                 Ok(())
             }
             Err(err) => {
-                self.state = ViewerState::Error(err.to_string());
-                Err(err)
+                let msg = err.to_string();
+                self.state = ViewerState::Error(msg.clone());
+                Err(Error::Engine(msg))
             }
         }
     }

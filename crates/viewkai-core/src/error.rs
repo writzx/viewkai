@@ -3,8 +3,9 @@ use thiserror::Error;
 /// All errors produced by the viewkai family of crates.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("PDFium error: {0}")]
-    Pdfium(String),
+    /// A string-typed engine error (used by viewkai-core which cannot depend on viewkai-engine).
+    #[error("engine error: {0}")]
+    Engine(String),
 
     #[error("document not loaded")]
     NotLoaded,

@@ -10,6 +10,7 @@ description = "PDFium rendering engine for viewkai"
 [dependencies]
 viewkai-core = { path = "../viewkai-core" }
 pdfium-render = { workspace = true, features = ["pdfium_latest", "image_latest"] }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
