@@ -1,6 +1,6 @@
 //! Visible-page determination for viewkai.
 
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 
 /// The set of pages that should be rendered in the current frame.
 #[derive(Debug, Default, Clone)]

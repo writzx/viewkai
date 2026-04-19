@@ -27,7 +27,7 @@ use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 use std::sync::Arc;
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 use viewkai_engine::{Document, error::EngineError};
 
 /// Per-page rendering state.

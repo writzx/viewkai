@@ -16,6 +16,7 @@
 /// Canonical crate name for the rendering engine crate.
 pub const NAME: &str = "viewkai-engine";
 
+/// Error types and result aliases for engine operations.
 pub mod error;
 
 use crate::error::{EngineError, Result};
@@ -24,10 +25,7 @@ use std::{
     pin::Pin,
     sync::{Mutex, OnceLock},
 };
-use viewkai_core::{
-    page::{PageIndex, PageSize},
-    render::RawImage,
-};
+use viewkai_core::{PageIndex, PageSize, RawImage};
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────
 

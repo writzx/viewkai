@@ -3,7 +3,7 @@
 #![allow(missing_docs)]
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 
 fn bench_parse_500_page_doc(c: &mut Criterion) {
     viewkai_engine::init().expect("Failed to initialize PDFium");

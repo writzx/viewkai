@@ -4,7 +4,7 @@ use egui::{ColorImage, Context, TextureOptions};
 use egui_kittest::Harness;
 use std::sync::{Mutex, OnceLock};
 use viewkai::cache::{CacheKey, TextureCache};
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();

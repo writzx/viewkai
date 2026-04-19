@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use egui::TextureHandle;
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 
 /// Cache key: page index + zoom bucket (DPI tier).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

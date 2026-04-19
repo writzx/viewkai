@@ -4,7 +4,7 @@
 //! re-parsing the PDF bytes on every call, and that typed errors are returned
 //! for out-of-bounds page indices.
 
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 use viewkai_engine::{error::EngineError, Document};
 
 /// Fixture: the hello.pdf test PDF.

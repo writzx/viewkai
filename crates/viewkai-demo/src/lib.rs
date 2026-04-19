@@ -1,6 +1,8 @@
+//! Demo application wiring for native and WASM `viewkai` embeds.
+
 use eframe::egui;
 use viewkai::{Viewer, zoom::ZoomState};
-use viewkai_core::page::PageIndex;
+use viewkai_core::PageIndex;
 use viewkai_engine::{Document, init};
 
 mod zoom_ui;
@@ -12,13 +14,25 @@ use std::sync::{Arc, Mutex};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
+/// Current loading lifecycle for the demo application.
 pub enum DemoLoadState {
+    /// No document is loaded and no load is in progress.
     Idle,
-    AcquiringBytes { label: String },
+    /// The app is currently fetching or opening document bytes.
+    AcquiringBytes {
+        /// Status label shown while bytes are being acquired.
+        label: String,
+    },
+    /// A document loaded successfully.
     Loaded,
-    Failed { msg: String },
+    /// Loading failed with a user-displayable message.
+    Failed {
+        /// User-facing error message describing the load failure.
+        msg: String,
+    },
 }
 
+/// Example application embedding the `viewkai` viewer widget.
 pub struct DemoApp {
     viewer: Viewer,
     load_state: DemoLoadState,
@@ -61,6 +75,8 @@ const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
 ];
 
 impl DemoApp {
+    /// Create a new demo app instance.
+    #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let _ = cc;
 
@@ -85,7 +101,7 @@ impl DemoApp {
                 self.load_state = DemoLoadState::AcquiringBytes {
                     label: source_label,
                 };
-                self.load_bytes(bytes);
+                self.load_bytes(&bytes);
             }
             LoadEvent::LoadSucceeded => {
                 self.load_state = DemoLoadState::Loaded;
@@ -105,8 +121,16 @@ impl DemoApp {
 
     /// Load a PDF from bytes without going through the file dialog.
     /// Transitions `DemoLoadState` to `Loaded` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns the user-facing load failure message when parsing or rendering the
+    /// provided PDF bytes fails.
+    // justify: the demo test/helpers hand owned fixture buffers through this API
+    // and retaining `Vec<u8>` avoids a public signature churn for little benefit.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn load_bytes_sync(&mut self, bytes: Vec<u8>) -> Result<(), String> {
-        self.load_bytes(bytes);
+        self.load_bytes(&bytes);
         match &self.load_state {
             DemoLoadState::Loaded => Ok(()),
             DemoLoadState::Failed { msg } => Err(msg.clone()),
@@ -115,20 +139,23 @@ impl DemoApp {
     }
 
     /// Returns a reference to the inner viewer for inspection.
+    #[must_use]
     pub fn viewer(&self) -> &viewkai::Viewer {
         &self.viewer
     }
 
+    /// Returns the current demo loading state.
+    #[must_use]
     pub fn load_state(&self) -> &DemoLoadState {
         &self.load_state
     }
 
     fn describe_pdf(bytes: &[u8]) -> Result<String, String> {
         let doc = Document::from_bytes(bytes.to_vec()).map_err(|err| err.to_string())?;
-        let size = doc
-            .page_size(PageIndex(0))
-            .map(|page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt))
-            .unwrap_or_else(|_| "unknown".to_owned());
+        let size = doc.page_size(PageIndex(0)).map_or_else(
+            |_| "unknown".to_owned(),
+            |page| format!("{:.1}x{:.1}", page.width_pt, page.height_pt),
+        );
 
         Ok(format!(
             "PDF loaded: {} pages. Page 1 size: {} points.",
@@ -137,8 +164,8 @@ impl DemoApp {
         ))
     }
 
-    fn load_bytes(&mut self, bytes: Vec<u8>) {
-        match self.viewer.load_bytes(bytes.clone()) {
+    fn load_bytes(&mut self, bytes: &[u8]) {
+        match self.viewer.load_bytes(bytes.to_owned()) {
             Ok(()) => {
                 self.total_pages = self.viewer.page_count();
                 self.page_input = if self.total_pages > 0 {
@@ -147,7 +174,7 @@ impl DemoApp {
                     String::new()
                 };
                 self.debug_info =
-                    Some(Self::describe_pdf(&bytes).unwrap_or_else(|err| {
+                    Some(Self::describe_pdf(bytes).unwrap_or_else(|err| {
                         format!("PDF loaded; debug info unavailable: {err}")
                     }));
                 self.transition(LoadEvent::LoadSucceeded);
@@ -241,7 +268,7 @@ impl DemoApp {
 
         for file in dropped_files {
             if let Some(bytes) = file.bytes {
-                self.load_bytes(bytes.to_vec());
+                self.load_bytes(bytes.as_ref());
                 break;
             }
         }
@@ -319,6 +346,10 @@ impl DemoApp {
 }
 
 impl eframe::App for DemoApp {
+    // justify: the UI method is the natural egui integration point and grouping
+    // its panels in one place keeps event flow easier to audit than splitting it
+    // into many tiny helpers.
+    #[allow(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         #[cfg(target_arch = "wasm32")]
         self.poll_pending_bytes();
@@ -425,7 +456,7 @@ impl eframe::App for DemoApp {
                 self.apply_zoom_factor(factor);
             }
 
-            let pinch_delta = ui.input(|i| i.zoom_delta());
+            let pinch_delta = ui.input(egui::InputState::zoom_delta);
             if (pinch_delta - 1.0).abs() > 0.01 {
                 self.apply_zoom_factor(pinch_delta);
             }
@@ -443,6 +474,15 @@ impl eframe::App for DemoApp {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Run the native demo application.
+///
+/// # Errors
+///
+/// Returns any `eframe` startup error from creating the native window.
+///
+/// # Panics
+///
+/// Panics if `viewkai_engine::init()` cannot initialise `PDFium` for the demo.
 pub fn run_native() -> eframe::Result {
     env_logger::init();
     init().expect("Failed to initialize PDFium");
@@ -462,6 +502,7 @@ pub fn run_native() -> eframe::Result {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Run the WebAssembly demo application.
 pub fn run_web() {
     wasm_bindgen_futures::spawn_local(async {
         wait_for_pdfium_module().await;

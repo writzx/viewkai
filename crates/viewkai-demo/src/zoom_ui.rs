@@ -30,8 +30,7 @@ fn zoom_label(zoom: ZoomState) -> &'static str {
         ZoomState::Discrete(z) | ZoomState::Custom(z) => zoom_levels()
             .iter()
             .find(|(_, lvl)| matches!(lvl, ZoomState::Discrete(d) if (z - d).abs() < ZOOM_EPSILON))
-            .map(|(label, _)| *label)
-            .unwrap_or("Custom"),
+            .map_or("Custom", |(label, _)| *label),
     }
 }
 

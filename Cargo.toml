@@ -33,3 +33,4 @@ cast_precision_loss = "allow"      # tests/bench display helpers and zoom math u
 redundant_closure_for_method_calls = "allow" # test poison handling closures stay explicit and readable
 semicolon_if_nothing_returned = "allow" # criterion benches prefer expression-style closures
 uninlined_format_args = "allow"    # existing acceptance tests keep stable explicit formatting strings
+multiple_crate_versions = "allow"  # transitive GUI/pdf stacks currently pull parallel upstream versions outside workspace control
