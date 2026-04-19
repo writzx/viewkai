@@ -283,17 +283,24 @@ pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage>
     let width = (page.width().value * scale).round() as Pixels;
     let height = (page.height().value * scale).round() as Pixels;
 
-    let mut config = Document::render_config()
+    let mut shared_config = Document::render_config()
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    *config = PdfRenderConfig::new()
+    let config = std::mem::replace(&mut *shared_config, PdfRenderConfig::new())
         .set_target_width(width)
         .set_target_height(height);
+    drop(shared_config);
+
     let bitmap = page
         .render_with_config(&config)
         .map_err(|e| EngineError::Pdfium {
             message: e.to_string(),
         })?;
+
+    let mut shared_config = Document::render_config()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    *shared_config = config;
 
     let pixels = bitmap.as_rgba_bytes();
 

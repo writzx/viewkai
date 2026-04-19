@@ -1,3 +1,5 @@
+//! Basic fixture-loading coverage for the hello.pdf test document.
+
 use viewkai_core::page::PageIndex;
 use viewkai_engine::{Document, init};
 
