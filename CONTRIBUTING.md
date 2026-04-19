@@ -25,3 +25,12 @@ wasm-pack build crates/viewkai --target web
 ```
 
 Use the demo crate for native app validation and keep library crates free of app-only dependencies.
+
+## Further reading
+
+- [docs/architecture.md](docs/architecture.md) — System architecture and crate dependencies
+- [docs/testing.md](docs/testing.md) — Test levels, snapshot workflow, adding new tests
+- [docs/coding-style.md](docs/coding-style.md) — Naming, module organization, unsafe policy, doc comments
+- [docs/dependency-policy.md](docs/dependency-policy.md) — How to add deps, crate boundaries, pinning strategy
+- [docs/error-handling.md](docs/error-handling.md) — Error types, `.unwrap()` rules, pdfium error mapping
+
