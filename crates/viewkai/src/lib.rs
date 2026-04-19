@@ -260,50 +260,13 @@ impl Viewer {
                 Self::handle_pending_scroll(ui, viewer_pending_scroll, &page_tops);
 
                 let scroll_offset = ui.clip_rect().min.y - ui.min_rect().min.y;
-                let vis_set = visibility.compute(
-                    scroll_offset.max(0.0),
-                    viewport_rect.height(),
-                    &page_tops,
-                    &page_heights,
-                );
+                let vis_set = visibility.compute(scroll_offset.max(0.0), viewport_rect.height(), &page_tops, &page_heights);
 
                 let center_y = scroll_offset + viewport_rect.height() / 2.0;
                 let to_render = Self::prioritize_renders(&vis_set, &page_tops, center_y);
+                Self::render_queued_pages(ui, document, cache, &to_render, zoom_bucket, dpi, now);
 
-                for &idx in &to_render {
-                    let key = CacheKey {
-                        page_idx: PageIndex(idx),
-                        zoom_bucket,
-                    };
-
-                    if cache.get(&key, now).is_none() {
-                        if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi)
-                        {
-                            let byte_size = raw.pixels.len();
-                            let image = egui::ColorImage::from_rgba_unmultiplied(
-                                [raw.width as usize, raw.height as usize],
-                                &raw.pixels,
-                            );
-                            let handle = ui.ctx().load_texture(
-                                format!("viewkai/page/{idx}/dpi{dpi}"),
-                                image,
-                                TextureOptions::LINEAR,
-                            );
-                            cache.insert(key, handle, byte_size, now);
-                        }
-                    }
-                }
-
-                Self::paint_pages(
-                    ui,
-                    pages,
-                    cache,
-                    &vis_set,
-                    effective_zoom,
-                    zoom_bucket,
-                    available_width,
-                    now,
-                );
+                Self::paint_pages(ui, pages, cache, &vis_set, effective_zoom, zoom_bucket, available_width, now);
             });
     }
 
@@ -344,6 +307,39 @@ impl Viewer {
         let mut to_render: Vec<usize> = vis_set.all_to_render().map(|page| page.0).collect();
         to_render.sort_by_key(|&idx| (idx as isize - center_page as isize).unsigned_abs());
         to_render
+    }
+
+    fn render_queued_pages(
+        ui: &egui::Ui,
+        document: &Arc<Document>,
+        cache: &mut TextureCache,
+        to_render: &[usize],
+        zoom_bucket: u8,
+        dpi: u32,
+        now: f64,
+    ) {
+        for &idx in to_render {
+            let key = CacheKey {
+                page_idx: PageIndex(idx),
+                zoom_bucket,
+            };
+
+            if cache.get(&key, now).is_none() {
+                if let Ok(raw) = viewkai_engine::render_page(document, PageIndex(idx), dpi) {
+                    let byte_size = raw.pixels.len();
+                    let image = egui::ColorImage::from_rgba_unmultiplied(
+                        [raw.width as usize, raw.height as usize],
+                        &raw.pixels,
+                    );
+                    let handle = ui.ctx().load_texture(
+                        format!("viewkai/page/{idx}/dpi{dpi}"),
+                        image,
+                        TextureOptions::LINEAR,
+                    );
+                    cache.insert(key, handle, byte_size, now);
+                }
+            }
+        }
     }
 
     fn paint_pages(
