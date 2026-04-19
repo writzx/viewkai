@@ -5,10 +5,16 @@ pub const NAME: &str = "viewkai-core";
 
 /// Common error types used across the workspace.
 pub mod error;
+/// Shared search data types.
+pub mod search;
+/// Shared text extraction data types.
+pub mod text;
 /// Shared coordinate, page, and render value types.
 pub mod types;
 
 pub use error::*;
+pub use search::{SearchMatch, SearchQuery, SearchState};
+pub use text::{CharIndex, CharSpan, GlyphBox, LineSpan, PageText, SelectionRange, WordSpan};
 pub use types::*;
 
 #[cfg(test)]
@@ -22,6 +28,7 @@ mod tests {
             width_pt: 612.0,
             height_pt: 792.0,
         };
+        let point = PointsPos { x: 10.0, y: 20.0 };
         let rect = PointsRect {
             x: 0.0,
             y: 0.0,
@@ -35,6 +42,38 @@ mod tests {
             height: 200,
         };
         let dpi = DpiScale(1.5);
+        let glyph = GlyphBox {
+            char: 'A',
+            bbox: rect,
+            font_size_pt: 12.0,
+            rotation_deg: 0.0,
+        };
+        let word = WordSpan {
+            page: page_idx,
+            start_char: 0,
+            end_char: 1,
+            bbox: rect,
+        };
+        let line = LineSpan {
+            page: page_idx,
+            y_baseline_pt: 42.0,
+            start_char: 0,
+            end_char: 1,
+        };
+        let char_index = CharIndex {
+            page: page_idx,
+            char: 0,
+        };
+        let char_span = CharSpan {
+            page: page_idx,
+            start: 0,
+            end: 1,
+        };
+        let page_text = PageText {
+            glyphs: vec![glyph.clone()],
+            words: vec![word.clone()],
+            lines: vec![line.clone()],
+        };
 
         let json = serde_json::to_string(&page_idx).unwrap();
         let decoded: PageIndex = serde_json::from_str(&json).unwrap();
@@ -43,6 +82,10 @@ mod tests {
         let json = serde_json::to_string(&page_size).unwrap();
         let decoded: PageSize = serde_json::from_str(&json).unwrap();
         assert_eq!(page_size, decoded);
+
+        let json = serde_json::to_string(&point).unwrap();
+        let decoded: PointsPos = serde_json::from_str(&json).unwrap();
+        assert_eq!(point, decoded);
 
         let json = serde_json::to_string(&rect).unwrap();
         let decoded: PointsRect = serde_json::from_str(&json).unwrap();
@@ -55,5 +98,29 @@ mod tests {
         let json = serde_json::to_string(&dpi).unwrap();
         let decoded: DpiScale = serde_json::from_str(&json).unwrap();
         assert_eq!(dpi, decoded);
+
+        let json = serde_json::to_string(&glyph).unwrap();
+        let decoded: GlyphBox = serde_json::from_str(&json).unwrap();
+        assert_eq!(glyph, decoded);
+
+        let json = serde_json::to_string(&word).unwrap();
+        let decoded: WordSpan = serde_json::from_str(&json).unwrap();
+        assert_eq!(word, decoded);
+
+        let json = serde_json::to_string(&line).unwrap();
+        let decoded: LineSpan = serde_json::from_str(&json).unwrap();
+        assert_eq!(line, decoded);
+
+        let json = serde_json::to_string(&char_index).unwrap();
+        let decoded: CharIndex = serde_json::from_str(&json).unwrap();
+        assert_eq!(char_index, decoded);
+
+        let json = serde_json::to_string(&char_span).unwrap();
+        let decoded: CharSpan = serde_json::from_str(&json).unwrap();
+        assert_eq!(char_span, decoded);
+
+        let json = serde_json::to_string(&page_text).unwrap();
+        let decoded: PageText = serde_json::from_str(&json).unwrap();
+        assert_eq!(page_text, decoded);
     }
 }

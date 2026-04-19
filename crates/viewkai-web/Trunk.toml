@@ -1,6 +1,6 @@
 [build]
 target = "index.html"
-dist = "../../dist/viewkai-demo"
+dist = "../../dist/viewkai-web"
 public_url = "./"
 
 [watch]

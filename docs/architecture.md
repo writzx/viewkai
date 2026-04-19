@@ -16,6 +16,18 @@ PDFium integration stays isolated inside the engine crate so public APIs can be 
 
 WASM is the deployment target, so native convenience cannot define the architecture. Avoiding native-only feature leakage and platform-specific execution models keeps the workspace aligned with browser delivery from the start.
 
+## Native and web host crates stay split and pure.
+
+`viewkai-app` and `viewkai-web` are sibling host crates with intentionally separate runtime dependency sets. Native-only concerns (`rfd`, `env_logger`) stay in `viewkai-app`; browser-only concerns (`ehttp`, `wasm-bindgen`, `js-sys`, `web-sys`) stay in `viewkai-web`. CI enforces this with `purity-app` and `purity-web` in addition to the existing library purity jobs.
+
+## Plugin architecture
+
+`viewkai` owns a fixed-order registry of built-in plugins from the sibling `viewkai-plugins` crate. Plugins contribute through three surfaces: per-page overlays during page painting, toolbar UI emitted on demand via `Viewer::show_plugin_toolbars()`, and viewer-level overlays emitted via `Viewer::show_plugin_overlays()`.
+
+The `ViewerPlugin` trait is sealed inside `viewkai-plugins`, so only built-in plugin types can implement it while the API evolves before v1.0. That crate stays `egui`-only and pdfium-free in its public surface; `viewkai` re-exports the built-ins and owns dispatch.
+
+Rendering order is deterministic: `TextLayerPlugin` is registered first, `SearchPlugin` second, and later built-ins append in registry order. Phase 0.5 keeps both built-ins as no-op stubs so existing snapshots remain unchanged while the contribution surfaces land.
+
 ## PDFium WASM Vendoring
 
 The `public/pdfium.js` and `public/pdfium.wasm` files are vendored binary artifacts from

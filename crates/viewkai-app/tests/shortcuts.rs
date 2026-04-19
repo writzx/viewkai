@@ -1,4 +1,4 @@
-//! Shortcut and load-state regression tests for `viewkai-demo`.
+//! Shortcut and load-state regression tests for `viewkai-app`.
 
 mod common;
 
@@ -6,7 +6,7 @@ use eframe::egui;
 use egui_kittest::kittest::Queryable;
 use std::sync::{Mutex, OnceLock};
 use viewkai::zoom::ZoomState;
-use viewkai_demo::DemoLoadState;
+use viewkai_app::LoadState;
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -95,7 +95,7 @@ fn shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc() {
     h.key_press_modifiers(egui::Modifiers::default(), egui::Key::Enter);
     h.step();
 
-    assert!(matches!(h.state().load_state(), DemoLoadState::Loaded));
+    assert!(matches!(h.state().load_state(), LoadState::Loaded));
     assert_eq!(h.state().viewer().page_count(), 1);
 }
 
@@ -107,13 +107,13 @@ fn demo_load_state_idle_to_loaded() {
     let mut h = common::demo_harness();
     h.run_ok();
 
-    assert!(matches!(h.state().load_state(), DemoLoadState::Idle));
+    assert!(matches!(h.state().load_state(), LoadState::Idle));
 
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
     h.state_mut().load_bytes_sync(bytes).expect("load hello");
     h.run_ok();
 
-    assert!(matches!(h.state().load_state(), DemoLoadState::Loaded));
+    assert!(matches!(h.state().load_state(), LoadState::Loaded));
     assert_eq!(h.state().viewer().page_count(), 1);
 }
 
@@ -133,12 +133,12 @@ fn demo_load_state_failed_dismiss_returns_to_idle() {
 
     assert!(matches!(
         h.state().load_state(),
-        DemoLoadState::Failed { .. }
+        LoadState::Failed { .. }
     ));
     h.get_by_label("Dismiss").click();
     h.run_ok();
 
-    assert!(matches!(h.state().load_state(), DemoLoadState::Idle));
+    assert!(matches!(h.state().load_state(), LoadState::Idle));
     assert_eq!(h.state().viewer().page_count(), 0);
 }
 
@@ -149,10 +149,10 @@ fn demo_harness_helpers_load_expected_fixtures() {
         .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     let hello = common::demo_harness_with_hello();
-    assert!(matches!(hello.state().load_state(), DemoLoadState::Loaded));
+    assert!(matches!(hello.state().load_state(), LoadState::Loaded));
     assert_eq!(hello.state().viewer().page_count(), 1);
 
     let multi = common::demo_harness_with_500page();
-    assert!(matches!(multi.state().load_state(), DemoLoadState::Loaded));
+    assert!(matches!(multi.state().load_state(), LoadState::Loaded));
     assert_eq!(multi.state().viewer().page_count(), 500);
 }

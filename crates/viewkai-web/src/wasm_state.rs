@@ -1,5 +1,5 @@
 #![cfg(target_arch = "wasm32")]
-//! WASM-specific state for the demo application.
+//! WASM-specific state for the web demo application.
 
 use std::sync::{Arc, Mutex};
 

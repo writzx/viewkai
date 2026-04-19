@@ -21,10 +21,10 @@ See [docs/testing.md](docs/testing.md) for the full testing guide, including:
 ## Build WASM
 
 ```bash
-wasm-pack build crates/viewkai --target web
+cd crates/viewkai-web && trunk build --release
 ```
 
-Use the demo crate for native app validation and keep library crates free of app-only dependencies.
+Use `viewkai-app` for native app validation, use `viewkai-web` for browser validation, and keep library crates free of app-only dependencies.
 
 ## Further reading
 
@@ -33,4 +33,3 @@ Use the demo crate for native app validation and keep library crates free of app
 - [docs/coding-style.md](docs/coding-style.md) — Naming, module organization, unsafe policy, doc comments
 - [docs/dependency-policy.md](docs/dependency-policy.md) — How to add deps, crate boundaries, pinning strategy
 - [docs/error-handling.md](docs/error-handling.md) — Error types, `.unwrap()` rules, pdfium error mapping
-

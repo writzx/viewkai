@@ -18,20 +18,28 @@ pub const NAME: &str = "viewkai-engine";
 
 /// Error types and result aliases for engine operations.
 pub mod error;
+/// Full-text search support built on top of pdfium-render.
+pub mod search;
+/// Text extraction support built on top of pdfium-render.
+pub mod text;
 
 use crate::error::{EngineError, Result};
 use pdfium_render::prelude::*;
 use std::{
+    collections::HashMap,
     pin::Pin,
-    sync::{Mutex, OnceLock},
+    sync::{Arc as StdArc, Mutex, OnceLock},
 };
-use viewkai_core::{PageIndex, PageSize, RawImage};
+use viewkai_core::{PageIndex, PageSize, PageText, RawImage};
+
+pub use text::extract_page_text;
+pub use search::search_page;
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────
 
 static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
 static PDFIUM_INIT_LOCK: Mutex<()> = Mutex::new(());
-static PDFIUM_OP_LOCK: Mutex<()> = Mutex::new(());
+pub(crate) static PDFIUM_OP_LOCK: Mutex<()> = Mutex::new(());
 
 /// Initialise the `PDFium` library.
 ///
@@ -120,6 +128,7 @@ pub struct Document {
     bytes: Pin<Box<[u8]>>,
     page_count: usize,
     page_sizes: Vec<PageSize>,
+    page_text_cache: Mutex<HashMap<PageIndex, StdArc<PageText>>>,
 }
 
 impl Document {
@@ -209,6 +218,7 @@ impl Document {
             bytes,
             page_count: count,
             page_sizes: sizes,
+            page_text_cache: Mutex::new(HashMap::new()),
         })
     }
 
@@ -246,6 +256,43 @@ impl Document {
     #[must_use]
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    /// Return the extracted text for the given page, using a cache.
+    ///
+    /// On first access, extracts text via pdfium-render and caches the result.
+    /// Subsequent calls return the cached `Arc<PageText>` without re-extraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the page index is out of bounds or if pdfium fails
+    /// to extract text.
+    pub fn page_text(&self, idx: PageIndex) -> Result<StdArc<PageText>> {
+        {
+            let cache = self
+                .page_text_cache
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if let Some(cached) = cache.get(&idx) {
+                return Ok(StdArc::clone(cached));
+            }
+        }
+
+        let text = StdArc::new(crate::text::extract_page_text(self, idx)?);
+        let mut cache = self
+            .page_text_cache
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        cache.insert(idx, StdArc::clone(&text));
+        Ok(text)
+    }
+
+    /// Clear the text extraction cache (for example, on memory pressure).
+    pub fn clear_text_cache(&self) {
+        self.page_text_cache
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clear();
     }
 }
 

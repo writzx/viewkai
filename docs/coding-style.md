@@ -24,7 +24,7 @@ Short form: library crates return `Result<T, E>` with a `thiserror`-derived `E`;
 - Non-trivial public functions should include `# Examples` with a doctest
 
 ## Unsafe Code
-- Forbidden in `viewkai`, `viewkai-core`, and `viewkai-demo`
+- Forbidden in `viewkai`, `viewkai-core`, `viewkai-app`, and `viewkai-web`
 - Permitted in `viewkai-engine` only for self-referential struct patterns (pdfium document caching)
 - Every `unsafe` block requires a `// SAFETY:` comment of ≥ 10 lines covering: aliasing rules, lifetime assumptions, drop order, and absence of escaped borrows
 - `unsafe` in `#[cfg(test)]` requires the same treatment

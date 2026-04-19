@@ -1,4 +1,4 @@
-//! Demo application wiring for native and WASM `viewkai` embeds.
+//! Native PDF viewer application built on `viewkai`.
 
 use eframe::egui;
 use viewkai::{Viewer, zoom::ZoomState};
@@ -6,16 +6,9 @@ use viewkai_core::PageIndex;
 use viewkai_engine::{Document, init};
 
 mod zoom_ui;
-#[cfg(target_arch = "wasm32")]
-mod wasm_state;
 
-#[cfg(target_arch = "wasm32")]
-use std::sync::{Arc, Mutex};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
-
-/// Current loading lifecycle for the demo application.
-pub enum DemoLoadState {
+/// Current loading lifecycle for the native application.
+pub enum LoadState {
     /// No document is loaded and no load is in progress.
     Idle,
     /// The app is currently fetching or opening document bytes.
@@ -32,12 +25,10 @@ pub enum DemoLoadState {
     },
 }
 
-/// Example application embedding the `viewkai` viewer widget.
-pub struct DemoApp {
+/// Native application embedding the `viewkai` viewer widget.
+pub struct App {
     viewer: Viewer,
-    load_state: DemoLoadState,
-    #[cfg(target_arch = "wasm32")]
-    wasm_state: wasm_state::WasmState,
+    load_state: LoadState,
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
@@ -74,17 +65,15 @@ const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
     ),
 ];
 
-impl DemoApp {
-    /// Create a new demo app instance.
+impl App {
+    /// Create a new native app instance.
     #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let _ = cc;
 
         Self {
             viewer: Viewer::new(),
-            load_state: DemoLoadState::Idle,
-            #[cfg(target_arch = "wasm32")]
-            wasm_state: wasm_state::WasmState::default(),
+            load_state: LoadState::Idle,
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
@@ -98,20 +87,20 @@ impl DemoApp {
                 bytes,
                 source_label,
             } => {
-                self.load_state = DemoLoadState::AcquiringBytes {
+                self.load_state = LoadState::AcquiringBytes {
                     label: source_label,
                 };
                 self.load_bytes(&bytes);
             }
             LoadEvent::LoadSucceeded => {
-                self.load_state = DemoLoadState::Loaded;
+                self.load_state = LoadState::Loaded;
             }
             LoadEvent::LoadFailed { message } => {
-                self.load_state = DemoLoadState::Failed { msg: message };
+                self.load_state = LoadState::Failed { msg: message };
             }
             LoadEvent::Reset => {
                 self.viewer.clear();
-                self.load_state = DemoLoadState::Idle;
+                self.load_state = LoadState::Idle;
                 self.debug_info = None;
                 self.total_pages = 0;
                 self.page_input.clear();
@@ -120,33 +109,33 @@ impl DemoApp {
     }
 
     /// Load a PDF from bytes without going through the file dialog.
-    /// Transitions `DemoLoadState` to `Loaded` on success.
+    /// Transitions `LoadState` to `Loaded` on success.
     ///
     /// # Errors
     ///
     /// Returns the user-facing load failure message when parsing or rendering the
     /// provided PDF bytes fails.
-    // justify: the demo test/helpers hand owned fixture buffers through this API
+    // justify: the app test/helpers hand owned fixture buffers through this API
     // and retaining `Vec<u8>` avoids a public signature churn for little benefit.
     #[allow(clippy::needless_pass_by_value)]
     pub fn load_bytes_sync(&mut self, bytes: Vec<u8>) -> Result<(), String> {
         self.load_bytes(&bytes);
         match &self.load_state {
-            DemoLoadState::Loaded => Ok(()),
-            DemoLoadState::Failed { msg } => Err(msg.clone()),
+            LoadState::Loaded => Ok(()),
+            LoadState::Failed { msg } => Err(msg.clone()),
             _ => Err("unexpected state after load".to_owned()),
         }
     }
 
     /// Returns a reference to the inner viewer for inspection.
     #[must_use]
-    pub fn viewer(&self) -> &viewkai::Viewer {
+    pub fn viewer(&self) -> &Viewer {
         &self.viewer
     }
 
-    /// Returns the current demo loading state.
+    /// Returns the current application loading state.
     #[must_use]
-    pub fn load_state(&self) -> &DemoLoadState {
+    pub fn load_state(&self) -> &LoadState {
         &self.load_state
     }
 
@@ -173,10 +162,10 @@ impl DemoApp {
                 } else {
                     String::new()
                 };
-                self.debug_info =
-                    Some(Self::describe_pdf(bytes).unwrap_or_else(|err| {
-                        format!("PDF loaded; debug info unavailable: {err}")
-                    }));
+                self.debug_info = Some(
+                    Self::describe_pdf(bytes)
+                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
+                );
                 self.transition(LoadEvent::LoadSucceeded);
             }
             Err(err) => {
@@ -190,9 +179,8 @@ impl DemoApp {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn open_file(&mut self) {
-        self.load_state = DemoLoadState::AcquiringBytes {
+        self.load_state = LoadState::AcquiringBytes {
             label: "Opening file…".to_owned(),
         };
 
@@ -200,7 +188,7 @@ impl DemoApp {
             .add_filter("PDF", &["pdf"])
             .pick_file()
         else {
-            self.load_state = DemoLoadState::Idle;
+            self.load_state = LoadState::Idle;
             return;
         };
 
@@ -215,61 +203,6 @@ impl DemoApp {
                 self.transition(LoadEvent::LoadFailed {
                     message: format!("Failed to read {}: {err}", path.display()),
                 });
-            }
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn start_fetch(&mut self, ctx: &egui::Context, url: String) {
-        let pending = Arc::new(Mutex::new(None));
-        let pending_clone = Arc::clone(&pending);
-        let repaint_ctx = ctx.clone();
-
-        self.load_state = DemoLoadState::AcquiringBytes {
-            label: format!("Fetching {url}"),
-        };
-
-        ehttp::fetch(ehttp::Request::get(&url), move |result| {
-            let bytes = result
-                .map(|response| response.bytes)
-                .map_err(|err| err.to_string());
-            *pending_clone.lock().unwrap() = Some(bytes);
-            repaint_ctx.request_repaint();
-        });
-
-        self.wasm_state.pending_bytes = Some(pending);
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn poll_pending_bytes(&mut self) {
-        if let Some(pending) = self.wasm_state.pending_bytes.as_ref().map(Arc::clone) {
-            if let Ok(mut guard) = pending.try_lock() {
-                if let Some(result) = guard.take() {
-                    self.wasm_state.pending_bytes = None;
-                    match result {
-                        Ok(bytes) => self.transition(LoadEvent::BytesReceived {
-                            bytes,
-                            source_label: "Processing fetched PDF".to_owned(),
-                        }),
-                        Err(msg) => {
-                            self.debug_info = None;
-                            self.viewer.clear();
-                            self.transition(LoadEvent::LoadFailed { message: msg });
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn maybe_load_from_drop(&mut self, ui: &egui::Ui) {
-        let dropped_files = ui.input(|input| input.raw.dropped_files.clone());
-
-        for file in dropped_files {
-            if let Some(bytes) = file.bytes {
-                self.load_bytes(bytes.as_ref());
-                break;
             }
         }
     }
@@ -345,19 +278,15 @@ impl DemoApp {
     }
 }
 
-impl eframe::App for DemoApp {
+impl eframe::App for App {
     // justify: the UI method is the natural egui integration point and grouping
     // its panels in one place keeps event flow easier to audit than splitting it
     // into many tiny helpers.
     #[allow(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        #[cfg(target_arch = "wasm32")]
-        self.poll_pending_bytes();
-
         self.handle_shortcuts(ui.ctx());
 
-        egui::Panel::top("demo_controls").show_inside(ui, |ui| {
-            #[cfg(not(target_arch = "wasm32"))]
+        egui::Panel::top("app_controls").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open…").clicked() {
@@ -369,35 +298,8 @@ impl eframe::App for DemoApp {
                 ui.separator();
 
                 zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
-            });
-
-            #[cfg(target_arch = "wasm32")]
-            ui.horizontal(|ui| {
-                let response = ui.add(
-                    egui::TextEdit::singleline(&mut self.wasm_state.url_input)
-                        .hint_text("https://example.com/document.pdf")
-                        .desired_width(f32::INFINITY),
-                );
-                let should_load = ui.button("Load").clicked()
-                    || (response.lost_focus()
-                        && ui.input(|input| input.key_pressed(egui::Key::Enter)));
-
-                if should_load {
-                    let url = self.wasm_state.url_input.trim().to_owned();
-                    if url.is_empty() {
-                        self.viewer.clear();
-                        self.debug_info = None;
-                        self.transition(LoadEvent::LoadFailed {
-                            message: "Enter a PDF URL before loading.".to_owned(),
-                        });
-                    } else {
-                        self.start_fetch(ui.ctx(), url);
-                    }
-                }
-
                 ui.separator();
-
-                zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
+                self.viewer.show_plugin_toolbars(ui);
             });
         });
 
@@ -421,7 +323,7 @@ impl eframe::App for DemoApp {
             });
         });
 
-        egui::Panel::bottom("demo_debug")
+        egui::Panel::bottom("app_debug")
             .resizable(true)
             .show_inside(ui, |ui| {
                 egui::CollapsingHeader::new("Debug")
@@ -436,9 +338,6 @@ impl eframe::App for DemoApp {
             });
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            #[cfg(target_arch = "wasm32")]
-            self.maybe_load_from_drop(ui);
-
             let scroll_delta = ui.input(|i| {
                 if i.modifiers.ctrl {
                     i.smooth_scroll_delta.y
@@ -448,11 +347,7 @@ impl eframe::App for DemoApp {
             });
 
             if scroll_delta.abs() > 0.1 {
-                let factor = if scroll_delta > 0.0 {
-                    1.1_f32
-                } else {
-                    1.0 / 1.1
-                };
+                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
                 self.apply_zoom_factor(factor);
             }
 
@@ -462,19 +357,18 @@ impl eframe::App for DemoApp {
             }
 
             match &self.load_state {
-                DemoLoadState::AcquiringBytes { label } => Self::show_loading(ui, label),
-                DemoLoadState::Failed { msg } => {
+                LoadState::Loaded | LoadState::Idle => self.viewer.show(ui),
+                LoadState::AcquiringBytes { label } => Self::show_loading(ui, label),
+                LoadState::Failed { msg } => {
                     let msg = msg.clone();
                     self.show_failure(ui, &msg);
                 }
-                DemoLoadState::Idle | DemoLoadState::Loaded => self.viewer.show(ui),
             }
         });
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// Run the native demo application.
+/// Run the native application.
 ///
 /// # Errors
 ///
@@ -482,110 +376,21 @@ impl eframe::App for DemoApp {
 ///
 /// # Panics
 ///
-/// Panics if `viewkai_engine::init()` cannot initialise `PDFium` for the demo.
-pub fn run_native() -> eframe::Result {
+/// Panics if `viewkai_engine::init()` cannot initialise `PDFium` for the app.
+pub fn run() -> eframe::Result {
     env_logger::init();
     init().expect("Failed to initialize PDFium");
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("viewkai demo")
+            .with_title("viewkai-app")
             .with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
 
     eframe::run_native(
-        "viewkai-demo",
+        "viewkai-app",
         options,
-        Box::new(|cc| Ok(Box::new(DemoApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(App::new(cc)))),
     )
-}
-
-#[cfg(target_arch = "wasm32")]
-/// Run the WebAssembly demo application.
-pub fn run_web() {
-    wasm_bindgen_futures::spawn_local(async {
-        wait_for_pdfium_module().await;
-
-        if let Err(err) = call_initialize_pdfium_render() {
-            web_sys::console::error_1(&format!("pdfium init failed: {err}").into());
-            return;
-        }
-
-        if let Err(err) = init() {
-            web_sys::console::error_1(&format!("viewkai_engine::init failed: {err}").into());
-            return;
-        }
-
-        let canvas = web_sys::window()
-            .and_then(|window| window.document())
-            .and_then(|document| document.get_element_by_id("the_canvas_id"))
-            .and_then(|element| element.dyn_into::<web_sys::HtmlCanvasElement>().ok())
-            .expect("missing canvas#the_canvas_id");
-
-        eframe::WebRunner::new()
-            .start(
-                canvas,
-                eframe::WebOptions::default(),
-                Box::new(|cc| Ok(Box::new(DemoApp::new(cc)))),
-            )
-            .await
-            .expect("Failed to start eframe web runner");
-    });
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn wait_for_pdfium_module() {
-    loop {
-        let ready = web_sys::window()
-            .and_then(|window| js_sys::Reflect::get(&window, &"__pdfiumModule".into()).ok())
-            .map(|value| !value.is_null() && !value.is_undefined())
-            .unwrap_or(false);
-
-        if ready {
-            break;
-        }
-
-        let promise = js_sys::Promise::resolve(&wasm_bindgen::JsValue::UNDEFINED);
-        let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn call_initialize_pdfium_render() -> Result<(), String> {
-    use wasm_bindgen::JsCast;
-
-    let window = web_sys::window().ok_or_else(|| "no window".to_owned())?;
-    let pdfium_module = js_sys::Reflect::get(&window, &"__pdfiumModule".into())
-        .map_err(|err| format!("missing __pdfiumModule: {err:?}"))?;
-
-    let global = js_sys::global();
-    let wasm_bindgen = js_sys::Reflect::get(&global, &"wasm_bindgen".into())
-        .map_err(|err| format!("missing wasm_bindgen global: {err:?}"))?;
-    let get_module = js_sys::Reflect::get(&wasm_bindgen, &"__wbindgen_get_module".into())
-        .map_err(|err| format!("missing __wbindgen_get_module: {err:?}"))?
-        .dyn_into::<js_sys::Function>()
-        .map_err(|_| "__wbindgen_get_module is not a function".to_owned())?;
-    let local_module = get_module
-        .call0(&wasm_bindgen::JsValue::UNDEFINED)
-        .map_err(|err| format!("__wbindgen_get_module call failed: {err:?}"))?;
-
-    let init_fn = js_sys::Reflect::get(&wasm_bindgen, &"initialize_pdfium_render".into())
-        .ok()
-        .and_then(|value| value.dyn_into::<js_sys::Function>().ok());
-
-    if let Some(function) = init_fn {
-        function
-            .call3(
-                &wasm_bindgen::JsValue::UNDEFINED,
-                &pdfium_module,
-                &local_module,
-                &false.into(),
-            )
-            .map_err(|err| format!("initialize_pdfium_render call failed: {err:?}"))?;
-    } else {
-        web_sys::console::warn_1(&"initialize_pdfium_render not found, proceeding anyway".into());
-    }
-
-    Ok(())
 }

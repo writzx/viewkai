@@ -121,7 +121,70 @@ jobs:
           curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin
       - name: Build WASM demo
         run: trunk build --release
-        working-directory: crates/viewkai-demo
+        working-directory: crates/viewkai-web
+
+  build-native:
+    name: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Download pdfium (Linux x64)
+        run: |
+          curl -fsSL --retry 5 --retry-delay 10 "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7789/pdfium-linux-x64.tgz" -o /tmp/pdfium.tgz
+          tar xzf /tmp/pdfium.tgz -C /tmp lib/
+          echo "PDFIUM_DYLIB_PATH=/tmp/lib/libpdfium.so" >> $GITHUB_ENV
+      - name: Build native app
+        run: cargo build -p viewkai-app --release
+
+  purity-app:
+    name: purity-app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check viewkai-app has no WASM-only runtime deps
+        run: |
+          if cargo tree -p viewkai-app -e normal --prefix none 2>&1 | grep -qE '^(wasm-bindgen|js-sys|web-sys|wasm-bindgen-futures)( |$)'; then
+            echo "FAIL: viewkai-app contains WASM-only dependencies"
+            exit 1
+          fi
+
+  purity-web:
+    name: purity-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check viewkai-web has no native-only runtime deps
+        run: |
+          if cargo tree -p viewkai-web -e normal --prefix none 2>&1 | grep -qE '^(rfd|env_logger)( |$)'; then
+            echo "FAIL: viewkai-web contains native-only dependencies"
+            exit 1
+          fi
+
+  purity-plugins:
+    name: purity-plugins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Assert viewkai-plugins has no eframe runtime dep
+        run: |
+          if cargo tree -p viewkai-plugins -e normal --prefix none 2>&1 | grep -qE '^eframe( |$)'; then
+            echo "FAIL: viewkai-plugins contains eframe"
+            exit 1
+          fi
+      - name: Assert viewkai-plugins surfaces no pdfium_render
+        run: |
+          if grep -rn 'pdfium_render::' crates/viewkai-plugins/src --include='*.rs'; then
+            echo "FAIL: pdfium_render::* surfaced in viewkai-plugins"
+            exit 1
+          fi
 
   purity-viewkai:
     name: purity-viewkai

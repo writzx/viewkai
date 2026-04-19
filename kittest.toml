@@ -1,6 +1,6 @@
 # Snapshot storage — relative to each crate's root at test time.
 # For viewkai: crates/viewkai/tests/snapshots
-# For viewkai-demo: crates/viewkai-demo/tests/snapshots
+# For viewkai-app: crates/viewkai-app/tests/snapshots
 output_path = "tests/snapshots"
 
 # Baseline threshold applies as fallback for any OS without an override.

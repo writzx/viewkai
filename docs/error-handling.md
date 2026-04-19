@@ -31,7 +31,7 @@ enum MyError {
 |---|---|---|
 | Library production code | ❌ banned | ❌ banned |
 | `#[cfg(test)]` or `tests/` | ✅ allowed | ✅ preferred |
-| `viewkai-demo` (binary) | ⚠️ discouraged, prefer `?` | ✅ with clear message |
+| `viewkai-app` / `viewkai-web` (binary/demo crates) | ⚠️ discouraged, prefer `?` | ✅ with clear message |
 
 Use `.expect("invariant: explanation")` rather than `.unwrap()` to document WHY the None/Err case is impossible.
 

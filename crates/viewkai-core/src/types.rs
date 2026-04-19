@@ -2,6 +2,15 @@
 
 use serde::{Deserialize, Serialize};
 
+/// A position measured in PDF points.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PointsPos {
+    /// X coordinate in PDF points.
+    pub x: f32,
+    /// Y coordinate in PDF points.
+    pub y: f32,
+}
+
 /// A rectangle measured in PDF points.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PointsRect {

@@ -26,11 +26,17 @@ use crate::error::LoadError;
 use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
-use std::sync::Arc;
-use viewkai_core::PageIndex;
+use std::{cell::Cell, sync::Arc};
+use viewkai_core::{PageIndex, PageText, PointsRect, SelectionRange};
 use viewkai_engine::{Document, error::EngineError};
+use viewkai_plugins::PluginRegistry;
+
+pub use viewkai_plugins::{
+    PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ViewerPlugin,
+};
 
 /// Per-page rendering state.
+#[derive(Clone, Copy)]
 pub struct PageState {
     /// Page dimensions in PDF points (1 pt = 1/72 inch).
     pub size_pt: Vec2,
@@ -74,6 +80,11 @@ pub struct Viewer {
     state: ViewerState,
     render: RenderState,
     pending_scroll_to_page: Option<usize>,
+    plugins: PluginRegistry,
+    pending_scroll: Cell<Option<(PageIndex, PointsRect)>>,
+    selection_color: Color32,
+    library_shortcuts_enabled: bool,
+    last_visible_pages: Vec<PageIndex>,
 }
 
 impl Default for Viewer {
@@ -86,11 +97,21 @@ impl Viewer {
     /// Create a new, empty viewer.
     #[must_use]
     pub fn new() -> Self {
-        Self {
+        let mut viewer = Self {
             state: ViewerState::Empty,
             render: RenderState::new(),
             pending_scroll_to_page: None,
-        }
+            plugins: PluginRegistry::new(vec![
+                Box::new(TextLayerPlugin::new()),
+                Box::new(SearchPlugin::new()),
+            ]),
+            pending_scroll: Cell::new(None),
+            selection_color: Color32::from_rgba_unmultiplied(70, 120, 210, 96),
+            library_shortcuts_enabled: true,
+            last_visible_pages: Vec::new(),
+        };
+        viewer.register_plugins();
+        viewer
     }
 
     /// Set the active zoom mode for subsequent renders.
@@ -109,6 +130,255 @@ impl Viewer {
     /// This sets a pending scroll target that is applied on the next `show()` call.
     pub fn scroll_to_page(&mut self, idx: usize) {
         self.pending_scroll_to_page = Some(idx);
+    }
+
+    /// Returns a shared reference to the built-in text-layer plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the text-layer plugin is not registered.
+    #[must_use]
+    pub fn text_layer(&self) -> &TextLayerPlugin {
+        match self.plugins.get::<TextLayerPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("TextLayerPlugin is always registered"),
+        }
+    }
+
+    /// Returns a mutable reference to the built-in text-layer plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the text-layer plugin is not registered.
+    pub fn text_layer_mut(&mut self) -> &mut TextLayerPlugin {
+        match self.plugins.get_mut::<TextLayerPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("TextLayerPlugin is always registered"),
+        }
+    }
+
+    /// Returns a shared reference to the built-in search plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the search plugin is not registered.
+    #[must_use]
+    pub fn search(&self) -> &SearchPlugin {
+        match self.plugins.get::<SearchPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("SearchPlugin is always registered"),
+        }
+    }
+
+    /// Returns a mutable reference to the built-in search plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the search plugin is not registered.
+    pub fn search_mut(&mut self) -> &mut SearchPlugin {
+        match self.plugins.get_mut::<SearchPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("SearchPlugin is always registered"),
+        }
+    }
+
+    /// Open the search overlay.
+    pub fn open_search(&mut self) {
+        self.search_mut().open();
+    }
+
+    /// Close the search overlay.
+    pub fn close_search(&mut self) {
+        self.search_mut().close();
+    }
+
+    /// Return the current search state, if any.
+    #[must_use]
+    pub fn search_state(&self) -> Option<&viewkai_core::SearchState> {
+        self.search().state()
+    }
+
+    /// Advance to the next search match and return it.
+    pub fn next_match(&mut self) -> Option<viewkai_core::SearchMatch> {
+        self.search_mut().next_match().cloned()
+    }
+
+    /// Go to the previous search match and return it.
+    pub fn prev_match(&mut self) -> Option<viewkai_core::SearchMatch> {
+        self.search_mut().prev_match().cloned()
+    }
+
+    /// Return the current search match.
+    #[must_use]
+    pub fn current_match(&self) -> Option<viewkai_core::SearchMatch> {
+        self.search().current_match().cloned()
+    }
+
+    /// Set the color for non-current match highlights.
+    pub fn set_match_color(&mut self, color: egui::Color32) {
+        self.search_mut().set_match_color(color);
+    }
+
+    /// Set the color for the current match highlight.
+    pub fn set_current_match_color(&mut self, color: egui::Color32) {
+        self.search_mut().set_current_match_color(color);
+    }
+
+    /// Set the color used to highlight selected text.
+    ///
+    /// Defaults to a semi-transparent blue matching egui's selection color.
+    pub fn set_selection_color(&mut self, color: Color32) {
+        self.selection_color = color;
+    }
+
+    /// Return the current selection highlight color.
+    #[must_use]
+    pub fn selection_color(&self) -> Color32 {
+        self.selection_color
+    }
+
+    /// Enable or disable the library's built-in keyboard shortcuts.
+    ///
+    /// When disabled, plugins skip shortcut consumption entirely. Consumers
+    /// can still call plugin methods directly. Defaults to `true`.
+    pub fn set_library_shortcuts_enabled(&mut self, enabled: bool) {
+        self.library_shortcuts_enabled = enabled;
+    }
+
+    /// Return whether the library's built-in keyboard shortcuts are enabled.
+    #[must_use]
+    pub fn library_shortcuts_enabled(&self) -> bool {
+        self.library_shortcuts_enabled
+    }
+
+    /// Select all text in the loaded document.
+    pub fn select_all(&mut self) {
+        let egui_ctx = egui::Context::default();
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let visible_pages = self.last_visible_pages.clone();
+        let pending_scroll = Cell::new(None);
+        let ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            &visible_pages,
+            &egui_ctx,
+            self.selection_color,
+            self.library_shortcuts_enabled,
+            &pending_scroll,
+        );
+        self.text_layer_mut().select_all(&ctx);
+    }
+
+    /// Clear the current text selection.
+    pub fn deselect(&mut self) {
+        self.text_layer_mut().deselect();
+    }
+
+    /// Return the currently selected text, if any.
+    #[must_use]
+    pub fn selected_text(&self) -> String {
+        let egui_ctx = egui::Context::default();
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            &[],
+            &egui_ctx,
+            self.selection_color,
+            self.library_shortcuts_enabled,
+            &self.pending_scroll,
+        );
+        self.text_layer().selected_text(&ctx)
+    }
+
+    /// Copy the selected text to the clipboard.
+    pub fn copy_selected_text(&self, egui_ctx: &egui::Context) {
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            &[],
+            egui_ctx,
+            self.selection_color,
+            self.library_shortcuts_enabled,
+            &self.pending_scroll,
+        );
+        self.text_layer().copy_selected_text(&ctx);
+    }
+
+    /// Return the current selection range, if any.
+    #[must_use]
+    pub fn selection(&self) -> Option<SelectionRange> {
+        self.text_layer().selection().cloned()
+    }
+
+    /// Render toolbar contributions from all registered plugins.
+    ///
+    /// Call this inside a panel or toolbar area of your choice. [`Viewer::show`]
+    /// does **not** call this — toolbar placement is a consumer UX decision.
+    pub fn show_plugin_toolbars(&mut self, ui: &mut egui::Ui) {
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let visible_pages = self.last_visible_pages.as_slice();
+        let selection_color = self.selection_color;
+        let library_shortcuts_enabled = self.library_shortcuts_enabled;
+        let pending_scroll = &self.pending_scroll;
+        let egui_ctx = ui.ctx().clone();
+        let mut ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            visible_pages,
+            &egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            pending_scroll,
+        );
+
+        for plugin in &mut self.plugins {
+            plugin.show_toolbar(ui, &mut ctx);
+        }
+
+        if ctx.repaint_requested() {
+            egui_ctx.request_repaint();
+        }
+    }
+
+    /// Render viewer-level overlays from all registered plugins.
+    ///
+    /// Call this once per frame, typically after page rendering. [`Viewer::show`]
+    /// calls this automatically.
+    pub fn show_plugin_overlays(&mut self, egui_ctx: &egui::Context) {
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let visible_pages = self.last_visible_pages.as_slice();
+        let selection_color = self.selection_color;
+        let library_shortcuts_enabled = self.library_shortcuts_enabled;
+        let pending_scroll = &self.pending_scroll;
+        let mut ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            visible_pages,
+            egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            pending_scroll,
+        );
+
+        for plugin in &mut self.plugins {
+            plugin.show_viewer_overlay(egui_ctx, &mut ctx);
+        }
+
+        if ctx.repaint_requested() {
+            egui_ctx.request_repaint();
+        }
     }
 
     /// Load a PDF from raw bytes.
@@ -138,6 +408,8 @@ impl Viewer {
 
                 self.render.cache.clear();
                 self.pending_scroll_to_page = None;
+                self.pending_scroll.set(None);
+                self.last_visible_pages.clear();
                 self.state = ViewerState::Loaded {
                     document: Arc::new(doc),
                     pages,
@@ -164,6 +436,8 @@ impl Viewer {
         self.state = ViewerState::Empty;
         self.render.cache.clear();
         self.pending_scroll_to_page = None;
+        self.pending_scroll.set(None);
+        self.last_visible_pages.clear();
     }
 
     /// Returns the number of pages in the loaded document, or 0 if no document is loaded.
@@ -190,6 +464,29 @@ impl Viewer {
         }
     }
 
+    /// Return the extracted text for the given page index, if a document is loaded.
+    ///
+    /// Uses the document's text cache — extraction happens on first access per page.
+    /// Returns `None` if no document is loaded.
+    #[must_use]
+    pub fn page_text(&self, idx: PageIndex) -> Option<Arc<PageText>> {
+        match &self.state {
+            ViewerState::Loaded { document, .. } => document.page_text(idx).ok(),
+            ViewerState::Empty | ViewerState::Error(_) => None,
+        }
+    }
+
+    /// Enable or disable the text-layer debug overlay (word bounding boxes).
+    pub fn set_text_layer_debug(&mut self, enabled: bool) {
+        self.text_layer_mut().set_debug(enabled);
+    }
+
+    /// Return whether the text-layer debug overlay is enabled.
+    #[must_use]
+    pub fn text_layer_debug(&self) -> bool {
+        self.text_layer().debug()
+    }
+
     /// Render the viewer into the given [`egui::Ui`].
     ///
     /// - **Empty**: shows "No document loaded".
@@ -197,6 +494,8 @@ impl Viewer {
     /// - **Loaded**: shows all pages in a vertical scroll area with lazy
     ///   rasterization.
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.dispatch_frame_update(ui.ctx());
+
         let mut should_clear = false;
 
         match &mut self.state {
@@ -227,6 +526,11 @@ impl Viewer {
                     &self.render.visibility,
                     self.render.zoom,
                     &mut self.pending_scroll_to_page,
+                    &mut self.plugins,
+                    &mut self.last_visible_pages,
+                    self.selection_color,
+                    self.library_shortcuts_enabled,
+                    &self.pending_scroll,
                 );
             }
         }
@@ -234,8 +538,13 @@ impl Viewer {
         if should_clear {
             self.clear();
         }
+
+        self.show_plugin_overlays(ui.ctx());
     }
 
+    // justify: page rendering stays snapshot-stable when the existing render inputs
+    // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
+    #[allow(clippy::too_many_arguments)]
     fn show_pages(
         ui: &mut egui::Ui,
         document: &Arc<Document>,
@@ -244,6 +553,11 @@ impl Viewer {
         visibility: &VisibilityTracker,
         zoom: ZoomState,
         viewer_pending_scroll: &mut Option<usize>,
+        plugins: &mut PluginRegistry,
+        last_visible_pages: &mut Vec<PageIndex>,
+        selection_color: Color32,
+        library_shortcuts_enabled: bool,
+        pending_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
     ) {
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
@@ -267,16 +581,57 @@ impl Viewer {
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
 
                 let (page_tops, page_heights) = Self::compute_page_layout(pages, effective_zoom);
-                Self::handle_pending_scroll(ui, viewer_pending_scroll, &page_tops);
+                Self::handle_pending_scroll(
+                    ui,
+                    viewer_pending_scroll,
+                    pending_scroll,
+                    &page_tops,
+                    pages,
+                    effective_zoom,
+                    available_width,
+                );
 
                 let scroll_offset = ui.clip_rect().min.y - ui.min_rect().min.y;
-                let vis_set = visibility.compute(scroll_offset.max(0.0), viewport_rect.height(), &page_tops, &page_heights);
+                let vis_set = visibility.compute(
+                    scroll_offset.max(0.0),
+                    viewport_rect.height(),
+                    &page_tops,
+                    &page_heights,
+                );
+                last_visible_pages.clear();
+                last_visible_pages.extend(vis_set.pages.iter().copied());
 
                 let center_y = scroll_offset + viewport_rect.height() / 2.0;
                 let to_render = Self::prioritize_renders(&vis_set, &page_tops, center_y);
                 Self::render_queued_pages(ui, document, cache, &to_render, zoom_bucket, dpi, now);
 
-                Self::paint_pages(ui, pages, cache, &vis_set, effective_zoom, zoom_bucket, available_width, now);
+                let egui_ctx = ui.ctx().clone();
+                let mut ctx = Self::make_plugin_context(
+                    Some(document.as_ref()),
+                    effective_zoom,
+                    last_visible_pages.as_slice(),
+                    &egui_ctx,
+                    selection_color,
+                    library_shortcuts_enabled,
+                    pending_scroll,
+                );
+
+                Self::paint_pages(
+                    ui,
+                    pages,
+                    cache,
+                    &vis_set,
+                    effective_zoom,
+                    zoom_bucket,
+                    available_width,
+                    now,
+                    plugins,
+                    &mut ctx,
+                );
+
+                if ctx.repaint_requested() {
+                    egui_ctx.request_repaint();
+                }
             });
     }
 
@@ -363,6 +718,8 @@ impl Viewer {
         zoom_bucket: u8,
         available_width: f32,
         now: f64,
+        plugins: &mut PluginRegistry,
+        plugin_ctx: &mut PluginContext<'_>,
     ) {
         const GAP: f32 = 16.0;
         const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
@@ -373,9 +730,9 @@ impl Viewer {
                 page.size_pt.y * effective_zoom,
             );
             let x_offset = ((available_width - display_size.x) / 2.0).max(0.0);
-            let (row_rect, _) = ui.allocate_exact_size(
+            let (row_rect, response) = ui.allocate_exact_size(
                 Vec2::new(available_width, display_size.y + GAP),
-                Sense::hover(),
+                Sense::click_and_drag(),
             );
             let page_rect =
                 Rect::from_min_size(row_rect.min + Vec2::new(x_offset, 0.0), display_size);
@@ -415,22 +772,178 @@ impl Viewer {
                     }
                 }
             }
+
+            let page_index = PageIndex(idx);
+            if vis_set.pages.contains(&page_index) {
+                if let Some(pointer_event) =
+                    Self::pointer_event(ui, &response, page_rect, effective_zoom)
+                {
+                    for plugin in &mut *plugins {
+                        if plugin.on_pointer_event(page_index, &pointer_event, plugin_ctx) {
+                            break;
+                        }
+                    }
+                }
+
+                let mut overlay_ui = ui.new_child(egui::UiBuilder::new().max_rect(page_rect));
+                for plugin in &mut *plugins {
+                    plugin.draw_page_overlay(page_index, &mut overlay_ui, plugin_ctx);
+                }
+            }
         }
     }
 
     fn handle_pending_scroll(
         ui: &mut egui::Ui,
-        pending_scroll: &mut Option<usize>,
+        pending_scroll_to_page: &mut Option<usize>,
+        pending_plugin_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
         page_tops: &[f32],
+        pages: &[PageState],
+        effective_zoom: f32,
+        available_width: f32,
     ) {
-        if let Some(target_idx) = pending_scroll.take()
+        if let Some(target_idx) = pending_scroll_to_page.take()
             && let Some(&top) = page_tops.get(target_idx)
         {
             ui.scroll_to_rect(
                 Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
                 Some(egui::Align::TOP),
             );
+        } else if let Some((page, rect_in_page_pt)) = pending_plugin_scroll.take()
+            && let Some((&top, page_state)) = page_tops.get(page.0).zip(pages.get(page.0))
+        {
+            let page_width = page_state.size_pt.x * effective_zoom;
+            let x_offset = ((available_width - page_width) / 2.0).max(0.0);
+            let target_rect = Rect::from_min_size(
+                egui::pos2(
+                    x_offset + rect_in_page_pt.x * effective_zoom,
+                    top + rect_in_page_pt.y * effective_zoom,
+                ),
+                Vec2::new(
+                    rect_in_page_pt.width.max(1.0) * effective_zoom,
+                    rect_in_page_pt.height.max(1.0) * effective_zoom,
+                ),
+            );
+            ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
         }
+    }
+
+    fn register_plugins(&mut self) {
+        let egui_ctx = egui::Context::default();
+        let zoom = self.current_context_zoom();
+        let visible_pages = self.last_visible_pages.as_slice();
+        let selection_color = self.selection_color;
+        let library_shortcuts_enabled = self.library_shortcuts_enabled;
+        let pending_scroll = &self.pending_scroll;
+        let mut ctx = Self::make_plugin_context(
+            None,
+            zoom,
+            visible_pages,
+            &egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            pending_scroll,
+        );
+
+        for plugin in &mut self.plugins {
+            plugin.on_register(&mut ctx);
+        }
+    }
+
+    fn dispatch_frame_update(&mut self, egui_ctx: &egui::Context) {
+        let document_handle = self.current_document_handle();
+        let document = document_handle.as_deref();
+        let zoom = self.current_context_zoom();
+        let visible_pages = self.last_visible_pages.as_slice();
+        let selection_color = self.selection_color;
+        let library_shortcuts_enabled = self.library_shortcuts_enabled;
+        let pending_scroll = &self.pending_scroll;
+        let mut ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            visible_pages,
+            egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            pending_scroll,
+        );
+
+        for plugin in &mut self.plugins {
+            plugin.on_frame_update(&mut ctx);
+        }
+
+        if ctx.repaint_requested() {
+            egui_ctx.request_repaint();
+        }
+    }
+
+    fn current_document_handle(&self) -> Option<Arc<Document>> {
+        match &self.state {
+            ViewerState::Loaded { document, .. } => Some(Arc::clone(document)),
+            ViewerState::Empty | ViewerState::Error(_) => None,
+        }
+    }
+
+    fn current_context_zoom(&self) -> f32 {
+        match self.render.zoom {
+            ZoomState::Discrete(zoom) | ZoomState::Custom(zoom) => zoom,
+            ZoomState::FitWidth | ZoomState::FitPage => 1.0,
+        }
+    }
+
+    fn make_plugin_context<'a>(
+        document: Option<&'a Document>,
+        zoom: f32,
+        visible_pages: &'a [PageIndex],
+        egui_ctx: &'a egui::Context,
+        selection_color: Color32,
+        library_shortcuts_enabled: bool,
+        pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
+    ) -> PluginContext<'a> {
+        PluginContext::new(
+            document,
+            zoom,
+            visible_pages,
+            egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            pending_scroll,
+        )
+    }
+
+    fn pointer_event(
+        ui: &egui::Ui,
+        response: &egui::Response,
+        page_rect: Rect,
+        effective_zoom: f32,
+    ) -> Option<PointerEvent> {
+        let pointer_pos = if response.hovered() {
+            ui.input(|input| input.pointer.hover_pos())
+        } else if response.dragged() || response.drag_started() || response.clicked() {
+            response.interact_pointer_pos()
+        } else {
+            None
+        }?;
+
+        let click_count = if response.triple_clicked() {
+            3
+        } else if response.double_clicked() {
+            2
+        } else {
+            // justify: u8::from avoids clippy::bool_to_int_with_if while keeping
+            // the intent clear: 1 when a drag or click starts, 0 otherwise.
+            u8::from(response.drag_started() || response.clicked())
+        };
+
+        Some(PointerEvent {
+            pos_in_page_pt: viewkai_core::PointsPos {
+                x: (pointer_pos.x - page_rect.min.x) / effective_zoom,
+                y: (pointer_pos.y - page_rect.min.y) / effective_zoom,
+            },
+            primary_down: ui.input(|input| input.pointer.primary_down()),
+            modifiers: ui.input(|input| input.modifiers),
+            click_count,
+        })
     }
 }
 

@@ -9,9 +9,9 @@ This document describes viewkai's testing strategy and how to work with tests.
 | **L1a — Pure-logic unit tests** | Inline `#[cfg(test)]` in `viewkai-core`, `cache.rs`, `viewport.rs`, `zoom.rs` | Coord math, cache semantics, zoom state math |
 | **L1b — Library widget tests** | `crates/viewkai/tests/` via `egui_kittest::Harness::new_ui_state` | Viewer rendering states, API surface (zoom, scroll, clear) |
 | **L1c — Library snapshot regression** | `crates/viewkai/tests/snapshots/` via `harness.snapshot()` | Visual output of key viewer states |
-| **L1d — Demo eframe integration** | `crates/viewkai-demo/tests/` via `egui_kittest::Harness::new_eframe` | Keyboard shortcuts, zoom toolbar, page-jump, DemoLoadState transitions |
+| **L1d — App eframe integration** | `crates/viewkai-app/tests/` via `egui_kittest::Harness::new_eframe` | Keyboard shortcuts, zoom toolbar, page-jump, `LoadState` transitions |
 | **L1e — Benchmarks** | `crates/viewkai/benches/` via criterion | Parsing and rasterization performance |
-| **L2 — Manual interactive** | `cargo run -p viewkai-demo` | Real rendering, pinch-to-zoom, native file dialog |
+| **L2 — Manual interactive** | `cargo run -p viewkai-app` / `cd crates/viewkai-web && trunk serve` | Native rendering, pinch-to-zoom, native file dialog, browser demo |
 | **L3 — Integration gates** | GH Pages browser demo + Valeria | Stack-boots-in-real-environment |
 
 ## When to Write Which Test
@@ -30,8 +30,8 @@ cargo test --workspace
 # Run only viewkai library tests
 cargo test -p viewkai
 
-# Run only demo tests
-cargo test -p viewkai-demo
+# Run only native app tests
+cargo test -p viewkai-app
 
 # Run with output (verbose)
 cargo test -p viewkai -- --nocapture
@@ -39,7 +39,7 @@ cargo test -p viewkai -- --nocapture
 
 ## Snapshot Tests
 
-Snapshots live in `crates/viewkai/tests/snapshots/` (library) and `crates/viewkai-demo/tests/snapshots/` (demo).
+Snapshots live in `crates/viewkai/tests/snapshots/` (library) and `crates/viewkai-app/tests/snapshots/` (native app).
 
 ### Updating Snapshots
 
@@ -70,25 +70,34 @@ The `egui_kittest` default OS is `OperatingSystem::Nix` for deterministic render
 `.gitignore` excludes: `*.new.png`, `*.diff.png`, `*.old.png` in snapshots directories.
 Only the plain `*.png` baselines are committed.
 
-## Testing the Demo (L1d)
+## Testing the Native App (L1d)
 
-The demo crate (`viewkai-demo`) is structured as a lib+bin crate:
-- `src/lib.rs` — `DemoApp`, `DemoLoadState`, `run_native`, `run_web` (all public)
+The native app crate (`viewkai-app`) is structured as a lib+bin crate:
+- `src/lib.rs` — `App`, `LoadState`, `run` (public)
 - `src/main.rs` — thin binary entry point
 
-Integration tests in `crates/viewkai-demo/tests/` use `egui_kittest::Harness::new_eframe()` wrapping the real `DemoApp`.
+Integration tests in `crates/viewkai-app/tests/` use `egui_kittest::Harness::new_eframe()` wrapping the real `App`.
 
-### Adding New Demo Tests
+### Adding New Native App Tests
 
-See `crates/viewkai-demo/tests/common/mod.rs` for shared harness helpers:
-- `demo_harness()` — fresh DemoApp, no PDF loaded
-- `demo_harness_with_hello()` — DemoApp with hello.pdf loaded
-- `demo_harness_with_500page()` — DemoApp with 500page.pdf loaded
+See `crates/viewkai-app/tests/common/mod.rs` for shared harness helpers:
+- `demo_harness()` — fresh App, no PDF loaded
+- `demo_harness_with_hello()` — App with hello.pdf loaded
+- `demo_harness_with_500page()` — App with 500page.pdf loaded
 
 ```bash
-# Run demo tests specifically
-cargo test -p viewkai-demo
+# Run native app tests specifically
+cargo test -p viewkai-app
 
 # Run a specific test
-cargo test -p viewkai-demo -- shortcut_ctrl_0_resets_zoom
+cargo test -p viewkai-app -- shortcut_ctrl_0_resets_zoom
+
+## Testing the Web Demo
+
+`viewkai-web` is a WASM-only crate. Build or serve it from its crate directory:
+
+```bash
+cd crates/viewkai-web
+trunk build --release
+```
 ```

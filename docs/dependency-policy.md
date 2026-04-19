@@ -1,15 +1,16 @@
 # Dependency Policy
 
-## Hard crate boundaries (from the four architectural invariants)
+## Hard crate boundaries (from the five architectural invariants)
 
 | Crate | May depend on |
 |---|---|
 | `viewkai` | `egui`, `viewkai-core`, `viewkai-engine` (never `eframe`, never pdfium types) |
 | `viewkai-core` | `thiserror`, `serde` (never `egui`, `eframe`, `pdfium-render`) |
 | `viewkai-engine` | `pdfium-render`, `viewkai-core` (never `egui`, `eframe`) |
-| `viewkai-demo` | All of the above + `eframe`, `rfd`, `ehttp` |
+| `viewkai-app` | All of the above + `eframe`, `rfd`, `env_logger` |
+| `viewkai-web` | All of the above + `eframe`, `ehttp`, `wasm-bindgen` family |
 
-Violations are caught by CI jobs `purity-viewkai`, `purity-engine`, `purity-core`.
+Violations are caught by CI jobs `purity-viewkai`, `purity-engine`, `purity-core`, `purity-app`, and `purity-web`.
 
 ## How to propose a new dependency
 
