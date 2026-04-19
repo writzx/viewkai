@@ -33,6 +33,7 @@ use viewkai_core::{
 
 static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
 static PDFIUM_INIT_LOCK: Mutex<()> = Mutex::new(());
+static PDFIUM_OP_LOCK: Mutex<()> = Mutex::new(());
 
 /// Initialise the `PDFium` library.
 ///
@@ -144,6 +145,9 @@ impl Document {
     )]
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
         let pdfium = PDFIUM.get().ok_or(EngineError::NotInitialised)?;
+        let _pdfium_op_guard = PDFIUM_OP_LOCK
+            .lock()
+            .map_err(|_| EngineError::InitLockPoisoned)?;
 
         // Pin the bytes on the heap so their address is stable for the lifetime
         // of this `Document`.
@@ -265,6 +269,10 @@ impl Document {
     clippy::cast_sign_loss
 )]
 pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
+    let _pdfium_op_guard = PDFIUM_OP_LOCK
+        .lock()
+        .map_err(|_| EngineError::InitLockPoisoned)?;
+
     let page = doc
         .pdf
         .pages()
@@ -283,24 +291,17 @@ pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage>
     let width = (page.width().value * scale).round() as Pixels;
     let height = (page.height().value * scale).round() as Pixels;
 
-    let mut shared_config = Document::render_config()
+    let mut config = Document::render_config()
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    let config = std::mem::replace(&mut *shared_config, PdfRenderConfig::new())
+    *config = PdfRenderConfig::new()
         .set_target_width(width)
         .set_target_height(height);
-    drop(shared_config);
-
     let bitmap = page
         .render_with_config(&config)
         .map_err(|e| EngineError::Pdfium {
             message: e.to_string(),
         })?;
-
-    let mut shared_config = Document::render_config()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    *shared_config = config;
 
     let pixels = bitmap.as_rgba_bytes();
 
