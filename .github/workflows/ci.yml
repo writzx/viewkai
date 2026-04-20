@@ -102,10 +102,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers vulkan-tools
           vulkaninfo --summary || true
-      # Run all tests except snapshot regression (which needs --test-threads=1 to avoid wgpu SIGSEGV)
+      # Run all tests except snapshot tests (which need --test-threads=1 to avoid wgpu SIGSEGV)
       - run: cargo test --workspace -- --skip snapshot_
       # Run snapshot regression tests sequentially to avoid wgpu context conflicts on lavapipe
       - run: cargo test -p viewkai --test snapshot_regression -- --test-threads=1
+      # Run selection snapshot test sequentially (uses wgpu/lavapipe, must not run concurrently)
+      - run: cargo test -p viewkai --test selection_snapshot -- --test-threads=1
 
   build-wasm:
     name: build-wasm

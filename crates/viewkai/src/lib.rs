@@ -399,8 +399,9 @@ impl Viewer {
                     .map(|i| {
                         let size = doc
                             .page_size(PageIndex(i))
-                            .map(|page| Vec2::new(page.width_pt, page.height_pt))
-                            .unwrap_or(Vec2::new(612.0, 792.0));
+                            .map_or(Vec2::new(612.0, 792.0), |page| {
+                                Vec2::new(page.width_pt, page.height_pt)
+                            });
 
                         PageState { size_pt: size }
                     })

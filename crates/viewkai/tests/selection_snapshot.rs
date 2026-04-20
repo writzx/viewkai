@@ -4,7 +4,7 @@ use egui_kittest::Harness;
 use viewkai::Viewer;
 
 #[test]
-fn selection_highlight_hello() {
+fn snapshot_selection_highlight_hello() {
     viewkai_engine::init().expect("pdfium init");
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
     let mut viewer = Viewer::new();
