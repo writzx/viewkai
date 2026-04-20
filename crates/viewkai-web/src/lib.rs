@@ -303,7 +303,7 @@ impl eframe::App for DemoApp {
     // into many tiny helpers.
     #[allow(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx();
+        let ctx = ui.ctx().clone();
 
         if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_PREV_ALT)) {
             self.viewer.prev_match();
