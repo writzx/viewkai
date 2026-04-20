@@ -10,6 +10,8 @@ use viewkai::{Viewer, zoom::ZoomState};
 use viewkai_core::PageIndex;
 #[cfg(target_arch = "wasm32")]
 use viewkai_engine::{Document, init};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_state;
