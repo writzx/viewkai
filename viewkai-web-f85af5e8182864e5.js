@@ -29,8 +29,11 @@ export function read_block_from_callback_wasm(param, position, pBuf, size) {
     return ret;
 }
 
-export function wasm_start() {
-    wasm.wasm_start();
+/**
+ * Start the web demo from the WASM entrypoint.
+ */
+export function start() {
+    wasm.start();
 }
 
 /**
@@ -2866,28 +2869,28 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 11320, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 11344, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__he767ae923b49b163);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 9461, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h16f2b8bb44e6a42e);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 9485, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h8c9320951a575d0e);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Array<any>")], shim_idx: 8754, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Array<any>")], shim_idx: 8778, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 8754, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6_3);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 8778, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf_3);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 8757, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h05dc37b4437bbed6);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 8781, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h2326247a70ff1b8d);
             return ret;
         },
         __wbindgen_cast_0000000000000006: function(arg0) {
@@ -2948,27 +2951,27 @@ function __wbg_get_imports() {
     };
     return {
         __proto__: null,
-        "./viewkai-demo_bg.js": import0,
+        "./viewkai-web_bg.js": import0,
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h05dc37b4437bbed6(arg0, arg1) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h05dc37b4437bbed6(arg0, arg1);
+function wasm_bindgen__convert__closures_____invoke__h2326247a70ff1b8d(arg0, arg1) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h2326247a70ff1b8d(arg0, arg1);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h16f2b8bb44e6a42e(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h16f2b8bb44e6a42e(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h8c9320951a575d0e(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h8c9320951a575d0e(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6_3(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hf1c6ba25ad74b3f6_3(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf_3(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hc84a446f8b62cdbf_3(arg0, arg1, arg2);
 }
 
 function wasm_bindgen__convert__closures_____invoke__he767ae923b49b163(arg0, arg1, arg2) {
@@ -3455,7 +3458,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('viewkai-demo_bg.wasm', import.meta.url);
+        module_or_path = new URL('viewkai-web_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

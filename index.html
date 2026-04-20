@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>viewkai demo</title>
+    <title>viewkai web demo</title>
     <style>
       html, body { margin: 0; overflow: hidden; }
       canvas { display: block; }
     </style>
     
     
-  <link rel="modulepreload" href="./viewkai-demo-a2e058499a1abe18.js" crossorigin="anonymous" integrity="sha384-DXohh53L2SYumES68IPZP5SZngOv9LQK/KSDQTmCjaiTvEiq2RMshhBnuclEG9nq"><link rel="preload" href="./viewkai-demo-a2e058499a1abe18_bg.wasm" crossorigin="anonymous" integrity="sha384-/4PNOydXJbt4XDnJ4asaUHXdgBT7Bw7ptFV3MHwZHgoNyiBb9p1eCI3GAzCvewMi" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="./viewkai-web-f85af5e8182864e5.js" crossorigin="anonymous" integrity="sha384-+K7g0OGSpUyJa24UOyNaCudLWnSwBlidm7OJKf30OkfL7GbDILlM5ZgOJFwSwaq1"><link rel="preload" href="./viewkai-web-f85af5e8182864e5_bg.wasm" crossorigin="anonymous" integrity="sha384-bwULHzygNKlWXRQIsM07uIxv52SKPEK8ifG5nmbq/B7ttwIyqRB9LTJn26isEn5t" as="fetch" type="application/wasm"></head>
   <body>
     <!-- Keep this in sync with public/index.html for local web hosting. -->
     <script src="pdfium.js"></script>
@@ -22,8 +22,8 @@
     </script>
     
 <script type="module">
-import init, * as bindings from './viewkai-demo-a2e058499a1abe18.js';
-const wasm = await init({ module_or_path: './viewkai-demo-a2e058499a1abe18_bg.wasm' });
+import init, * as bindings from './viewkai-web-f85af5e8182864e5.js';
+const wasm = await init({ module_or_path: './viewkai-web-f85af5e8182864e5_bg.wasm' });
 
 
 window.wasmBindings = bindings;
