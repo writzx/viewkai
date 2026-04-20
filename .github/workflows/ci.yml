@@ -112,6 +112,8 @@ jobs:
       - run: cargo test -p viewkai --test text_layer_debug -- --test-threads=1
       - run: cargo test -p viewkai --test text_layer_multipage -- --test-threads=1
       - run: cargo test -p viewkai --test search_multipage -- --test-threads=1
+      - run: cargo test -p viewkai --test find_navigation -- --test-threads=1
+      - run: cargo test -p viewkai --test selection_blur -- --test-threads=1
 
   build-wasm:
     name: build-wasm
