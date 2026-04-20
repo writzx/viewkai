@@ -32,11 +32,14 @@ jobs:
           UPDATE_SNAPSHOTS=true cargo test -p viewkai snapshot_ -- --test-threads=1
           UPDATE_SNAPSHOTS=true cargo test -p viewkai --test selection_snapshot -- --test-threads=1
           UPDATE_SNAPSHOTS=true cargo test -p viewkai --test text_layer_debug -- --test-threads=1
+          UPDATE_SNAPSHOTS=true cargo test -p viewkai --test text_layer_multipage -- --test-threads=1
+          cargo test -p viewkai --test text_layer_multipage -- --test-threads=1
       - name: Verify baselines pass
         run: |
           cargo test -p viewkai snapshot_ -- --test-threads=1
           cargo test -p viewkai --test selection_snapshot -- --test-threads=1
           cargo test -p viewkai --test text_layer_debug -- --test-threads=1
+          cargo test -p viewkai --test text_layer_multipage -- --test-threads=1
       - name: Commit updated baselines
         run: |
           git config user.name "github-actions[bot]"
