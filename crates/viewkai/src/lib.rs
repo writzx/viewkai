@@ -266,6 +266,7 @@ impl Viewer {
             &egui_ctx,
             self.selection_color,
             self.library_shortcuts_enabled,
+            None,
             &pending_scroll,
         );
         self.text_layer_mut().select_all(&ctx);
@@ -290,6 +291,7 @@ impl Viewer {
             &egui_ctx,
             self.selection_color,
             self.library_shortcuts_enabled,
+            None,
             &self.pending_scroll,
         );
         self.text_layer().selected_text(&ctx)
@@ -307,6 +309,7 @@ impl Viewer {
             egui_ctx,
             self.selection_color,
             self.library_shortcuts_enabled,
+            None,
             &self.pending_scroll,
         );
         self.text_layer().copy_selected_text(&ctx);
@@ -338,6 +341,7 @@ impl Viewer {
             &egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            None,
             pending_scroll,
         );
 
@@ -369,6 +373,7 @@ impl Viewer {
             egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            None,
             pending_scroll,
         );
 
@@ -614,6 +619,7 @@ impl Viewer {
                     &egui_ctx,
                     selection_color,
                     library_shortcuts_enabled,
+                    None,
                     pending_scroll,
                 );
 
@@ -782,10 +788,12 @@ impl Viewer {
                     }
                 }
 
+                plugin_ctx.page_rect_screen = Some(page_rect);
                 let mut overlay_ui = ui.new_child(egui::UiBuilder::new().max_rect(page_rect));
                 for plugin in &mut *plugins {
                     plugin.draw_page_overlay(page_index, &mut overlay_ui, plugin_ctx);
                 }
+                plugin_ctx.page_rect_screen = None;
             }
         }
     }
@@ -839,6 +847,7 @@ impl Viewer {
             &egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            None,
             pending_scroll,
         );
 
@@ -862,6 +871,7 @@ impl Viewer {
             egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            None,
             pending_scroll,
         );
 
@@ -888,6 +898,9 @@ impl Viewer {
         }
     }
 
+    // justify: the helper mirrors PluginContext's explicit per-dispatch inputs,
+    // so keeping the arguments flat makes each call site's viewer state obvious.
+    #[allow(clippy::too_many_arguments)]
     fn make_plugin_context<'a>(
         document: Option<&'a Document>,
         zoom: f32,
@@ -895,6 +908,7 @@ impl Viewer {
         egui_ctx: &'a egui::Context,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
+        page_rect_screen: Option<egui::Rect>,
         pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
     ) -> PluginContext<'a> {
         PluginContext::new(
@@ -904,6 +918,7 @@ impl Viewer {
             egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            page_rect_screen,
             pending_scroll,
         )
     }

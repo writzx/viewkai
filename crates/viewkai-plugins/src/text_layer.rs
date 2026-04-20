@@ -298,7 +298,10 @@ impl ViewerPlugin for TextLayerPlugin {
             return;
         };
 
-        let page_origin = ui.min_rect().min;
+        let page_origin = ctx
+            .page_rect_screen
+            .expect("page_rect_screen must be Some during draw_page_overlay; ensure paint_pages threads it via PluginContext")
+            .min;
         let zoom = ctx.zoom;
 
         if self.debug {

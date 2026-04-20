@@ -24,6 +24,9 @@ pub struct PluginContext<'a> {
     pub selection_color: Color32,
     /// Whether the library's built-in keyboard shortcuts are enabled.
     pub library_shortcuts_enabled: bool,
+    /// Screen-space rectangle of the current page. `Some` only during
+    /// `draw_page_overlay` dispatch; `None` during all other hooks.
+    pub page_rect_screen: Option<egui::Rect>,
     /// Set by `request_repaint`; `Viewer` reads it at end of frame and calls
     /// `ctx.request_repaint()` if true.
     pub(crate) repaint_requested: bool,
@@ -36,6 +39,9 @@ pub struct PluginContext<'a> {
 impl PluginContext<'_> {
     /// Construct a new plugin context for one dispatch pass.
     #[must_use]
+    // justify: PluginContext is intentionally assembled from explicit per-frame viewer state,
+    // and adding a builder/helper struct here would just obscure the hook contract.
+    #[allow(clippy::too_many_arguments)]
     pub fn new<'a>(
         document: Option<&'a Document>,
         zoom: f32,
@@ -43,6 +49,7 @@ impl PluginContext<'_> {
         egui_ctx: &'a Context,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
+        page_rect_screen: Option<egui::Rect>,
         pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
     ) -> PluginContext<'a> {
         PluginContext {
@@ -52,6 +59,7 @@ impl PluginContext<'_> {
             egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            page_rect_screen,
             repaint_requested: false,
             pending_scroll,
         }
