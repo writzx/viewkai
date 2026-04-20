@@ -53,7 +53,6 @@ enum ShortcutAction {
     FitPage,
     ZoomIn,
     ZoomOut,
-    FocusPageInput,
 }
 
 const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
@@ -87,12 +86,22 @@ const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
         egui::Key::Minus,
         ShortcutAction::ZoomOut,
     ),
-    (
-        egui::Modifiers::CTRL,
-        egui::Key::G,
-        ShortcutAction::FocusPageInput,
-    ),
 ];
+
+const SHORTCUT_FIND_PREV_ALT: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers {
+        command: true,
+        shift: true,
+        ..egui::Modifiers::NONE
+    },
+    egui::Key::G,
+);
+const SHORTCUT_FIND_NEXT_ALT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::G);
+const SHORTCUT_FIND_PREV: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::F3);
+const SHORTCUT_FIND_NEXT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F3);
 
 impl App {
     /// Create a new native app instance.
@@ -287,6 +296,19 @@ impl App {
                 self.apply_shortcut_action(action);
             }
         }
+
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_PREV_ALT)) {
+            self.viewer.prev_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT_ALT)) {
+            self.viewer.next_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_PREV)) {
+            self.viewer.prev_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT)) {
+            self.viewer.next_match();
+        }
     }
 
     fn apply_shortcut_action(&mut self, action: &ShortcutAction) {
@@ -302,7 +324,6 @@ impl App {
                 let z = zoom_ui::step_zoom_down(self.viewer.zoom());
                 self.viewer.set_zoom(z);
             }
-            ShortcutAction::FocusPageInput => self.page_input_focused = true,
         }
     }
 }

@@ -22,6 +22,25 @@ mod zoom_ui;
 const DEFAULT_PDF: &[u8] = include_bytes!("../../../tests/fixtures/hello.pdf");
 
 #[cfg(target_arch = "wasm32")]
+const SHORTCUT_FIND_PREV_ALT: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers {
+        command: true,
+        shift: true,
+        ..egui::Modifiers::NONE
+    },
+    egui::Key::G,
+);
+#[cfg(target_arch = "wasm32")]
+const SHORTCUT_FIND_NEXT_ALT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::G);
+#[cfg(target_arch = "wasm32")]
+const SHORTCUT_FIND_PREV: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::F3);
+#[cfg(target_arch = "wasm32")]
+const SHORTCUT_FIND_NEXT: egui::KeyboardShortcut =
+    egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F3);
+
+#[cfg(target_arch = "wasm32")]
 /// Current loading lifecycle for the web demo application.
 pub enum DemoLoadState {
     /// No document is loaded and no load is in progress.
@@ -284,6 +303,21 @@ impl eframe::App for DemoApp {
     // into many tiny helpers.
     #[allow(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx();
+
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_PREV_ALT)) {
+            self.viewer.prev_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT_ALT)) {
+            self.viewer.next_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_PREV)) {
+            self.viewer.prev_match();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT)) {
+            self.viewer.next_match();
+        }
+
         self.poll_pending_bytes();
 
         egui::Panel::top("web_controls").show_inside(ui, |ui| {
@@ -306,7 +340,7 @@ impl eframe::App for DemoApp {
                             message: "Enter a PDF URL before loading.".to_owned(),
                         });
                     } else {
-                        self.start_fetch(ui.ctx(), url);
+                        self.start_fetch(ctx, url);
                     }
                 }
 

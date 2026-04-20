@@ -309,6 +309,14 @@ impl ViewerPlugin for SearchPlugin {
                             }
                         }
 
+                        if ui.button("▲").clicked() {
+                            go_prev = true;
+                        }
+
+                        if ui.button("▼").clicked() {
+                            go_next = true;
+                        }
+
                         if ui.button("✕").clicked() {
                             close = true;
                         }
