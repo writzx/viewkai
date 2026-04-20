@@ -1,0 +1,7 @@
+    Checking viewkai-core v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-core)
+    Checking viewkai-engine v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-engine)
+    Checking viewkai-plugins v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-plugins)
+    Checking viewkai v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai)
+    Checking viewkai-app v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-app)
+    Checking viewkai-web v0.1.0 (/Users/wdas/projects/valeria/viewkai/crates/viewkai-web)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.31s
