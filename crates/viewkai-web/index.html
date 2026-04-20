@@ -15,9 +15,25 @@
     <!-- Keep this in sync with public/index.html for local web hosting. -->
     <script src="pdfium.js"></script>
     <script>
-      window.__pdfiumModule = null;
-      PDFiumModule().then((m) => {
-        window.__pdfiumModule = m;
+      // Load pdfium's emscripten module as a promise; the Rust wasm module
+      // is loaded separately by Trunk and dispatches `TrunkApplicationStarted`
+      // when ready. We initialize pdfium-render's bindings once both are ready,
+      // then hand control to Rust via the exported `run()` function.
+      const pdfiumReady = PDFiumModule();
+      window.addEventListener("TrunkApplicationStarted", async (event) => {
+        try {
+          const pdfiumModule = await pdfiumReady;
+          window.__pdfiumModule = pdfiumModule;
+          const bindings = window.wasmBindings;
+          const rustModule = event.detail.wasm;
+          if (!bindings.initialize_pdfium_render(pdfiumModule, rustModule, false)) {
+            console.error("initialize_pdfium_render returned false");
+            return;
+          }
+          bindings.run();
+        } catch (err) {
+          console.error("pdfium/viewkai bootstrap failed:", err);
+        }
       });
     </script>
     <link data-trunk rel="rust" />

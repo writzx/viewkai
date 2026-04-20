@@ -425,16 +425,11 @@ impl eframe::App for DemoApp {
 
 #[cfg(target_arch = "wasm32")]
 /// Run the WebAssembly demo application.
+/// Called from JavaScript after `initialize_pdfium_render()` has succeeded.
+#[wasm_bindgen::prelude::wasm_bindgen]
 pub fn run() {
     console_error_panic_hook::set_once();
     wasm_bindgen_futures::spawn_local(async {
-        wait_for_pdfium_module().await;
-
-        if let Err(err) = call_initialize_pdfium_render() {
-            web_sys::console::error_1(&format!("pdfium init failed: {err}").into());
-            return;
-        }
-
         if let Err(err) = init() {
             web_sys::console::error_1(&format!("viewkai_engine::init failed: {err}").into());
             return;
@@ -443,9 +438,7 @@ pub fn run() {
         let canvas = web_sys::window()
             .and_then(|window| window.document())
             .and_then(|document| document.get_element_by_id("the_canvas_id"))
-            .and_then(|element| {
-                wasm_bindgen::JsCast::dyn_into::<web_sys::HtmlCanvasElement>(element).ok()
-            })
+            .and_then(|element| element.dyn_into::<web_sys::HtmlCanvasElement>().ok())
             .expect("missing canvas#the_canvas_id");
 
         eframe::WebRunner::new()
@@ -467,57 +460,3 @@ pub fn run() {
 #[cfg(not(target_arch = "wasm32"))]
 /// Stub for non-WASM builds of the web crate.
 pub fn run() {}
-
-#[cfg(target_arch = "wasm32")]
-async fn wait_for_pdfium_module() {
-    loop {
-        let ready = web_sys::window()
-            .and_then(|window| js_sys::Reflect::get(&window, &"__pdfiumModule".into()).ok())
-            .map(|value| !value.is_null() && !value.is_undefined())
-            .unwrap_or(false);
-
-        if ready {
-            break;
-        }
-
-        let promise = js_sys::Promise::resolve(&wasm_bindgen::JsValue::UNDEFINED);
-        let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn call_initialize_pdfium_render() -> Result<(), String> {
-    let window = web_sys::window().ok_or_else(|| "no window".to_owned())?;
-    let pdfium_module = js_sys::Reflect::get(&window, &"__pdfiumModule".into())
-        .map_err(|err| format!("missing __pdfiumModule: {err:?}"))?;
-
-    let global = js_sys::global();
-    let wasm_bindgen = js_sys::Reflect::get(&global, &"wasm_bindgen".into())
-        .map_err(|err| format!("missing wasm_bindgen global: {err:?}"))?;
-    let get_module = js_sys::Reflect::get(&wasm_bindgen, &"__wbindgen_get_module".into())
-        .map_err(|err| format!("missing __wbindgen_get_module: {err:?}"))?
-        .dyn_into::<js_sys::Function>()
-        .map_err(|_| "__wbindgen_get_module is not a function".to_owned())?;
-    let local_module = get_module
-        .call0(&wasm_bindgen::JsValue::UNDEFINED)
-        .map_err(|err| format!("__wbindgen_get_module call failed: {err:?}"))?;
-
-    let init_fn = js_sys::Reflect::get(&wasm_bindgen, &"initialize_pdfium_render".into())
-        .ok()
-        .and_then(|value| value.dyn_into::<js_sys::Function>().ok());
-
-    if let Some(function) = init_fn {
-        function
-            .call3(
-                &wasm_bindgen::JsValue::UNDEFINED,
-                &pdfium_module,
-                &local_module,
-                &false.into(),
-            )
-            .map_err(|err| format!("initialize_pdfium_render call failed: {err:?}"))?;
-    } else {
-        web_sys::console::warn_1(&"initialize_pdfium_render not found, proceeding anyway".into());
-    }
-
-    Ok(())
-}
