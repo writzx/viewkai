@@ -340,7 +340,7 @@ impl eframe::App for DemoApp {
                             message: "Enter a PDF URL before loading.".to_owned(),
                         });
                     } else {
-                        self.start_fetch(ctx, url);
+                        self.start_fetch(&ctx, url);
                     }
                 }
 
