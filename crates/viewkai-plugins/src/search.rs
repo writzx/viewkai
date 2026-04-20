@@ -116,6 +116,17 @@ impl SearchPlugin {
         state.matches.get(state.current_match)
     }
 
+    /// Return the zero-based index of the current match, if any.
+    #[must_use]
+    pub fn current_match_index(&self) -> Option<usize> {
+        let state = self.state.as_ref()?;
+        if state.matches.is_empty() {
+            None
+        } else {
+            Some(state.current_match)
+        }
+    }
+
     /// Set the color for non-current match highlights.
     pub fn set_match_color(&mut self, color: Color32) {
         self.match_color = color;

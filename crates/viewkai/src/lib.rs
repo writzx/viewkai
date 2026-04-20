@@ -214,6 +214,12 @@ impl Viewer {
         self.search().current_match().cloned()
     }
 
+    /// Return the zero-based index of the current search match.
+    #[must_use]
+    pub fn current_match_index(&self) -> Option<usize> {
+        self.search().current_match_index()
+    }
+
     /// Set the color for non-current match highlights.
     pub fn set_match_color(&mut self, color: egui::Color32) {
         self.search_mut().set_match_color(color);
