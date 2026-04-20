@@ -161,7 +161,11 @@ impl SearchPlugin {
         } else {
             state.current_match + 1
         };
-        let suffix = if state.pending_pages.is_empty() { "" } else { "+" };
+        let suffix = if state.pending_pages.is_empty() {
+            ""
+        } else {
+            "+"
+        };
         format!("{current} of {}{suffix}", state.matches.len())
     }
 

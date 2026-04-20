@@ -36,9 +36,14 @@ pub struct App {
 }
 
 enum LoadEvent {
-    BytesReceived { bytes: Vec<u8>, source_label: String },
+    BytesReceived {
+        bytes: Vec<u8>,
+        source_label: String,
+    },
     LoadSucceeded,
-    LoadFailed { message: String },
+    LoadFailed {
+        message: String,
+    },
     Reset,
 }
 
@@ -52,12 +57,36 @@ enum ShortcutAction {
 }
 
 const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
-    (egui::Modifiers::CTRL, egui::Key::Num0, ShortcutAction::ResetZoom),
-    (egui::Modifiers::CTRL, egui::Key::Num1, ShortcutAction::FitWidth),
-    (egui::Modifiers::CTRL, egui::Key::Num2, ShortcutAction::FitPage),
-    (egui::Modifiers::CTRL, egui::Key::Plus, ShortcutAction::ZoomIn),
-    (egui::Modifiers::CTRL, egui::Key::Equals, ShortcutAction::ZoomIn),
-    (egui::Modifiers::CTRL, egui::Key::Minus, ShortcutAction::ZoomOut),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Num0,
+        ShortcutAction::ResetZoom,
+    ),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Num1,
+        ShortcutAction::FitWidth,
+    ),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Num2,
+        ShortcutAction::FitPage,
+    ),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Plus,
+        ShortcutAction::ZoomIn,
+    ),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Equals,
+        ShortcutAction::ZoomIn,
+    ),
+    (
+        egui::Modifiers::CTRL,
+        egui::Key::Minus,
+        ShortcutAction::ZoomOut,
+    ),
     (
         egui::Modifiers::CTRL,
         egui::Key::G,
@@ -162,10 +191,10 @@ impl App {
                 } else {
                     String::new()
                 };
-                self.debug_info = Some(
-                    Self::describe_pdf(bytes)
-                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
-                );
+                self.debug_info =
+                    Some(Self::describe_pdf(bytes).unwrap_or_else(|err| {
+                        format!("PDF loaded; debug info unavailable: {err}")
+                    }));
                 self.transition(LoadEvent::LoadSucceeded);
             }
             Err(err) => {
@@ -347,7 +376,11 @@ impl eframe::App for App {
             });
 
             if scroll_delta.abs() > 0.1 {
-                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
+                let factor = if scroll_delta > 0.0 {
+                    1.1_f32
+                } else {
+                    1.0 / 1.1
+                };
                 self.apply_zoom_factor(factor);
             }
 

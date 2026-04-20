@@ -49,9 +49,14 @@ pub struct DemoApp {
 
 #[cfg(target_arch = "wasm32")]
 enum LoadEvent {
-    BytesReceived { bytes: Vec<u8>, source_label: String },
+    BytesReceived {
+        bytes: Vec<u8>,
+        source_label: String,
+    },
     LoadSucceeded,
-    LoadFailed { message: String },
+    LoadFailed {
+        message: String,
+    },
     Reset,
 }
 
@@ -154,10 +159,10 @@ impl DemoApp {
                 } else {
                     String::new()
                 };
-                self.debug_info = Some(
-                    Self::describe_pdf(bytes)
-                        .unwrap_or_else(|err| format!("PDF loaded; debug info unavailable: {err}")),
-                );
+                self.debug_info =
+                    Some(Self::describe_pdf(bytes).unwrap_or_else(|err| {
+                        format!("PDF loaded; debug info unavailable: {err}")
+                    }));
                 self.transition(LoadEvent::LoadSucceeded);
             }
             Err(err) => {
@@ -354,7 +359,11 @@ impl eframe::App for DemoApp {
             });
 
             if scroll_delta.abs() > 0.1 {
-                let factor = if scroll_delta > 0.0 { 1.1_f32 } else { 1.0 / 1.1 };
+                let factor = if scroll_delta > 0.0 {
+                    1.1_f32
+                } else {
+                    1.0 / 1.1
+                };
                 self.apply_zoom_factor(factor);
             }
 
@@ -394,7 +403,9 @@ pub fn run() {
         let canvas = web_sys::window()
             .and_then(|window| window.document())
             .and_then(|document| document.get_element_by_id("the_canvas_id"))
-            .and_then(|element| wasm_bindgen::JsCast::dyn_into::<web_sys::HtmlCanvasElement>(element).ok())
+            .and_then(|element| {
+                wasm_bindgen::JsCast::dyn_into::<web_sys::HtmlCanvasElement>(element).ok()
+            })
             .expect("missing canvas#the_canvas_id");
 
         eframe::WebRunner::new()

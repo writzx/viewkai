@@ -121,13 +121,7 @@ pub trait ViewerPlugin: crate::sealed::Sealed + Any + 'static {
 
     /// Called for each visible page after the page texture is drawn.
     /// `ui` is positioned at the page's top-left in screen space.
-    fn draw_page_overlay(
-        &mut self,
-        _page: PageIndex,
-        _ui: &mut Ui,
-        _ctx: &mut PluginContext<'_>,
-    ) {
-    }
+    fn draw_page_overlay(&mut self, _page: PageIndex, _ui: &mut Ui, _ctx: &mut PluginContext<'_>) {}
 
     /// Called to render toolbar contributions. Consumer decides placement by
     /// calling `Viewer::show_plugin_toolbars(ui)`.

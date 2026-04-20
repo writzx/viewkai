@@ -1,8 +1,5 @@
 use eframe::egui;
-use viewkai::{
-    Viewer,
-    zoom::ZoomState,
-};
+use viewkai::{Viewer, zoom::ZoomState};
 
 const DISCRETE_LEVELS: [f32; 9] = [0.25, 0.50, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
 const ZOOM_EPSILON: f32 = 0.01;

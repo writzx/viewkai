@@ -26,7 +26,10 @@ impl std::fmt::Display for LoadError {
             Self::Engine(err) => write!(f, "engine error: {err}"),
             Self::InvalidPdf { source } => write!(f, "invalid PDF: {source}"),
             Self::Uninitialised => {
-                write!(f, "viewkai-engine not initialised; call viewkai_engine::init() first")
+                write!(
+                    f,
+                    "viewkai-engine not initialised; call viewkai_engine::init() first"
+                )
             }
         }
     }

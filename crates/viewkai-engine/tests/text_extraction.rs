@@ -19,7 +19,10 @@ fn hello_pdf_has_one_word() {
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
     let doc = Document::from_bytes(bytes).expect("load hello.pdf");
     let text = doc.page_text(PageIndex(0)).expect("extract text");
-    assert!(!text.words.is_empty(), "hello.pdf should have at least one word");
+    assert!(
+        !text.words.is_empty(),
+        "hello.pdf should have at least one word"
+    );
 }
 
 #[test]

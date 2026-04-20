@@ -4,8 +4,8 @@ use pdfium_render::prelude::*;
 use viewkai_core::text::CharSpan;
 use viewkai_core::{PageIndex, PointsRect, SearchMatch, SearchQuery};
 
-use crate::error::{EngineError, Result};
 use crate::Document;
+use crate::error::{EngineError, Result};
 
 /// Search a single page for matches of the given query.
 ///
@@ -63,9 +63,11 @@ pub fn search_page(
             options = options.match_whole_word(true);
         }
 
-        let search = page_text.search(&query.term, &options).map_err(|e| EngineError::Pdfium {
-            message: e.to_string(),
-        })?;
+        let search = page_text
+            .search(&query.term, &options)
+            .map_err(|e| EngineError::Pdfium {
+                message: e.to_string(),
+            })?;
 
         search
             .iter(PdfSearchDirection::SearchForward)
@@ -80,8 +82,7 @@ pub fn search_page(
                     start = Some(
                         start.map_or(segment_start, |current: usize| current.min(segment_start)),
                     );
-                    end =
-                        Some(end.map_or(segment_end, |current: usize| current.max(segment_end)));
+                    end = Some(end.map_or(segment_end, |current: usize| current.max(segment_end)));
                 }
 
                 let (start, end) = (start?, end?);

@@ -32,8 +32,8 @@ use std::{
 };
 use viewkai_core::{PageIndex, PageSize, PageText, RawImage};
 
-pub use text::extract_page_text;
 pub use search::search_page;
+pub use text::extract_page_text;
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────
 
@@ -192,20 +192,18 @@ impl Document {
             //    used only so this self-referential storage pattern compiles; callers
             //    can access page data only through borrows derived from `&self`, which
             //    cannot outlive the owning `Document`.
-            unsafe {
-                std::mem::transmute::<
-                    PdfDocument<'_>,
-                    PdfDocument<'static>,
-                >(loaded)
-            }
+            unsafe { std::mem::transmute::<PdfDocument<'_>, PdfDocument<'static>>(loaded) }
         };
 
         let count = pdf.pages().len() as usize;
         let sizes = (0..count)
             .map(|i| {
-                let page = pdf.pages().get(i as PdfPageIndex).map_err(|e| EngineError::Pdfium {
-                    message: e.to_string(),
-                })?;
+                let page = pdf
+                    .pages()
+                    .get(i as PdfPageIndex)
+                    .map_err(|e| EngineError::Pdfium {
+                        message: e.to_string(),
+                    })?;
                 Ok(PageSize {
                     width_pt: page.width().value,
                     height_pt: page.height().value,

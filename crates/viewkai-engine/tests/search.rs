@@ -58,5 +58,8 @@ fn search_no_matches_returns_empty_vec() {
         whole_word: false,
     };
     let matches = search_page(&doc, PageIndex(0), &query).expect("search");
-    assert!(matches.is_empty(), "non-existent term should return no matches");
+    assert!(
+        matches.is_empty(),
+        "non-existent term should return no matches"
+    );
 }

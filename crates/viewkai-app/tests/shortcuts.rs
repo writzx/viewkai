@@ -131,10 +131,7 @@ fn demo_load_state_failed_dismiss_returns_to_idle() {
     assert!(!err.is_empty(), "failure should surface a message");
     h.run_ok();
 
-    assert!(matches!(
-        h.state().load_state(),
-        LoadState::Failed { .. }
-    ));
+    assert!(matches!(h.state().load_state(), LoadState::Failed { .. }));
     h.get_by_label("Dismiss").click();
     h.run_ok();
 

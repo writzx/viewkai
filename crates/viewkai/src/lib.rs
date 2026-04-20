@@ -653,11 +653,7 @@ impl Viewer {
         (page_tops, page_heights)
     }
 
-    fn prioritize_renders(
-        vis_set: &VisibleSet,
-        page_tops: &[f32],
-        center_y: f32,
-    ) -> Vec<usize> {
+    fn prioritize_renders(vis_set: &VisibleSet, page_tops: &[f32], center_y: f32) -> Vec<usize> {
         let center_page = page_tops
             .iter()
             .enumerate()

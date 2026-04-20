@@ -352,8 +352,8 @@ impl ViewerPlugin for TextLayerPlugin {
                 for glyph in selected_glyphs.iter().skip(1) {
                     let right =
                         (union_rect.x + union_rect.width).max(glyph.bbox.x + glyph.bbox.width);
-                    let bottom = (union_rect.y + union_rect.height)
-                        .max(glyph.bbox.y + glyph.bbox.height);
+                    let bottom =
+                        (union_rect.y + union_rect.height).max(glyph.bbox.y + glyph.bbox.height);
                     union_rect.x = union_rect.x.min(glyph.bbox.x);
                     union_rect.y = union_rect.y.min(glyph.bbox.y);
                     union_rect.width = right - union_rect.x;
@@ -380,9 +380,15 @@ impl ViewerPlugin for TextLayerPlugin {
         let ctrl_c = egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::C);
         let esc = egui::Key::Escape;
 
-        if ctx.egui_ctx.input_mut(|input| input.consume_shortcut(&ctrl_a)) {
+        if ctx
+            .egui_ctx
+            .input_mut(|input| input.consume_shortcut(&ctrl_a))
+        {
             self.select_all(ctx);
-        } else if ctx.egui_ctx.input_mut(|input| input.consume_shortcut(&ctrl_c)) {
+        } else if ctx
+            .egui_ctx
+            .input_mut(|input| input.consume_shortcut(&ctrl_c))
+        {
             self.copy_selected_text(ctx);
         } else if ctx.egui_ctx.input(|input| input.key_pressed(esc)) {
             self.deselect();
@@ -465,10 +471,7 @@ mod tests {
     #[test]
     fn selection_normalize_forward() {
         let page = PageIndex(0);
-        let a = CharIndex {
-            page,
-            char: 10,
-        };
+        let a = CharIndex { page, char: 10 };
         let b = CharIndex { page, char: 5 };
         let sel = SelectionRange::new(a, b);
         assert_eq!(sel.start.char, 5);

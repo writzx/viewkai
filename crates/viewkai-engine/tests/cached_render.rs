@@ -5,7 +5,7 @@
 //! for out-of-bounds page indices.
 
 use viewkai_core::PageIndex;
-use viewkai_engine::{error::EngineError, Document};
+use viewkai_engine::{Document, error::EngineError};
 
 /// Fixture: the hello.pdf test PDF.
 const HELLO_PDF: &[u8] = include_bytes!("../../../tests/fixtures/hello.pdf");
@@ -38,8 +38,14 @@ fn render_page_out_of_bounds_returns_typed_error() {
     let result = viewkai_engine::render_page(&doc, PageIndex(page_count), 72);
     match result {
         Err(EngineError::PageIndexOutOfBounds { index, count }) => {
-            assert_eq!(index as usize, page_count, "index should match requested page");
-            assert_eq!(count as usize, page_count, "count should match document page count");
+            assert_eq!(
+                index as usize, page_count,
+                "index should match requested page"
+            );
+            assert_eq!(
+                count as usize, page_count,
+                "count should match document page count"
+            );
         }
         other => panic!("expected PageIndexOutOfBounds, got {other:?}"),
     }
