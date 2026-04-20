@@ -5,25 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>viewkai web demo</title>
     <style>
-      html, body { margin: 0; overflow: hidden; }
-      canvas { display: block; }
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+      canvas { display: block; width: 100vw; height: 100vh; }
     </style>
     
     
-  <link rel="modulepreload" href="./viewkai-web-2a347c37fdf1c1a3.js" crossorigin="anonymous" integrity="sha384-Yv/t+uWU2z8QQQaZoo2bAATE7OlEf5hVhE3LmLvPkHDTEXdi9g3qJ1IrHy6hSyvy"><link rel="preload" href="./viewkai-web-2a347c37fdf1c1a3_bg.wasm" crossorigin="anonymous" integrity="sha384-OPi6pdwz/RN8wvpXPzNbDHY7gaUGfbSi5hSq9PGjaQ4wCWpaUws0ai1ZDYEOkKvD" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="./viewkai-web-9054ce1fc9deb62b.js" crossorigin="anonymous" integrity="sha384-xTKF9r08B4sG33JMEPr2yHKmADhxdP7b4MBbP2RwOWBxyrwmqwoyVcgvfquSCdcg"><link rel="preload" href="./viewkai-web-9054ce1fc9deb62b_bg.wasm" crossorigin="anonymous" integrity="sha384-z03Qc7r1ItZMqsaCuVC7W1fYddmJ1nDXbs+ofs7FFXVd3mGRV23N5sf8/ryLyHbG" as="fetch" type="application/wasm"></head>
   <body>
     <!-- Keep this in sync with public/index.html for local web hosting. -->
     <script src="pdfium.js"></script>
     <script>
-      window.__pdfiumModule = null;
-      PDFiumModule().then((m) => {
-        window.__pdfiumModule = m;
+      // Load pdfium's emscripten module as a promise; the Rust wasm module
+      // is loaded separately by Trunk and dispatches `TrunkApplicationStarted`
+      // when ready. We initialize pdfium-render's bindings once both are ready,
+      // then hand control to Rust via the exported `run()` function.
+      const pdfiumReady = PDFiumModule();
+      window.addEventListener("TrunkApplicationStarted", async (event) => {
+        try {
+          const pdfiumModule = await pdfiumReady;
+          window.__pdfiumModule = pdfiumModule;
+          const bindings = window.wasmBindings;
+          const rustModule = event.detail.wasm;
+          if (!bindings.initialize_pdfium_render(pdfiumModule, rustModule, false)) {
+            console.error("initialize_pdfium_render returned false");
+            return;
+          }
+          bindings.run();
+        } catch (err) {
+          console.error("pdfium/viewkai bootstrap failed:", err);
+        }
       });
     </script>
     
 <script type="module">
-import init, * as bindings from './viewkai-web-2a347c37fdf1c1a3.js';
-const wasm = await init({ module_or_path: './viewkai-web-2a347c37fdf1c1a3_bg.wasm' });
+import init, * as bindings from './viewkai-web-9054ce1fc9deb62b.js';
+const wasm = await init({ module_or_path: './viewkai-web-9054ce1fc9deb62b_bg.wasm' });
 
 
 window.wasmBindings = bindings;
