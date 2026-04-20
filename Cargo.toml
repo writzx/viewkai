@@ -34,3 +34,4 @@ redundant_closure_for_method_calls = "allow" # test poison handling closures sta
 semicolon_if_nothing_returned = "allow" # criterion benches prefer expression-style closures
 uninlined_format_args = "allow"    # existing acceptance tests keep stable explicit formatting strings
 multiple_crate_versions = "allow"  # transitive GUI/pdf stacks currently pull parallel upstream versions outside workspace control
+redundant_feature_names = "allow"  # justify: viewkai-core's "test-support" feature is de-facto Cargo convention; renaming would break test fixtures

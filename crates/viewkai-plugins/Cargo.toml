@@ -38,4 +38,4 @@ redundant_closure_for_method_calls = "allow"
 semicolon_if_nothing_returned = "allow"
 uninlined_format_args = "allow"
 multiple_crate_versions = "allow"
-redundant_feature_names = "allow"
+redundant_feature_names = "allow"  # justify: viewkai-core's "test-support" feature is de-facto Cargo convention; renaming would break test fixtures
