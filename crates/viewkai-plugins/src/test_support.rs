@@ -30,6 +30,7 @@ pub fn build_context<'a>(
         egui_ctx,
         selection_color,
         library_shortcuts_enabled,
+        page_rect_screen: None,
         repaint_requested: false,
         pending_scroll,
     }

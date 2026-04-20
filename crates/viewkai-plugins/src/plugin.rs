@@ -92,6 +92,9 @@ impl PluginContext<'_> {
 pub struct PointerEvent {
     /// Pointer position in page-local PDF points.
     pub pos_in_page_pt: PointsPos,
+    /// Whether the pointer is inside the page's screen-space rectangle.
+    /// `true` even if the pointer does not hit any glyph.
+    pub inside_page_rect: bool,
     /// Whether the primary mouse button is currently held down.
     pub primary_down: bool,
     /// Active keyboard modifiers.

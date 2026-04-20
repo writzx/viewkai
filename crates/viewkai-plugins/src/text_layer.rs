@@ -241,16 +241,52 @@ pub(crate) fn apply_pointer_event(
 
     if event.primary_down && event.click_count == 1 {
         if let Some(char_idx) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt) {
+            if event.modifiers.command {
+                if let Some(existing) = selection.as_ref() {
+                    *selection = Some(extend_selection_with_click(existing, char_idx));
+                } else {
+                    *selection = Some(SelectionRange::new(char_idx, char_idx));
+                }
+            } else {
+                *selection = Some(SelectionRange::new(char_idx, char_idx));
+            }
             *anchor = Some(char_idx);
-            *selection = Some(SelectionRange::new(char_idx, char_idx));
             return true;
         }
         *selection = None;
         *anchor = None;
-        return false;
+        return event.inside_page_rect;
     }
 
     false
+}
+
+fn extend_selection_with_click(existing: &SelectionRange, char_idx: CharIndex) -> SelectionRange {
+    let new_char_ord = (char_idx.page.0, char_idx.char);
+    let start_ord = (existing.start.page.0, existing.start.char);
+    let end_ord = (existing.end.page.0, existing.end.char);
+
+    if new_char_ord >= start_ord {
+        let new_end_char = char_idx.char.saturating_add(1);
+        let new_end = CharIndex {
+            page: char_idx.page,
+            char: new_end_char,
+        };
+        let new_end_ord = (new_end.page.0, new_end.char);
+        SelectionRange {
+            start: existing.start,
+            end: if new_end_ord > end_ord {
+                new_end
+            } else {
+                existing.end
+            },
+        }
+    } else {
+        SelectionRange {
+            start: char_idx,
+            end: existing.end,
+        }
+    }
 }
 
 /// Pure hit-test helper (no `PluginContext` needed — testable with synthetic data).
@@ -417,7 +453,11 @@ impl ViewerPlugin for TextLayerPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::Cell;
+
+    use egui::Context;
     use viewkai_core::{GlyphBox, PageText, WordSpan};
+    use viewkai_engine::Document;
 
     fn make_glyph(ch: char, x: f32, y: f32, w: f32, h: f32) -> GlyphBox {
         GlyphBox {
@@ -430,6 +470,43 @@ mod tests {
             },
             font_size_pt: 12.0,
             rotation_deg: 0.0,
+        }
+    }
+
+    fn load_hello_document() -> Document {
+        viewkai_engine::init().expect("pdfium init");
+        Document::from_bytes(
+            include_bytes!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../tests/fixtures/hello.pdf"
+            ))
+            .to_vec(),
+        )
+        .expect("load hello.pdf")
+    }
+
+    fn test_context<'a>(
+        document: Option<&'a Document>,
+        egui_ctx: &'a Context,
+    ) -> PluginContext<'a> {
+        let pending_scroll = Box::leak(Box::new(Cell::new(None)));
+        PluginContext {
+            document,
+            zoom: 1.0,
+            visible_pages: &[],
+            egui_ctx,
+            selection_color: Color32::LIGHT_BLUE,
+            library_shortcuts_enabled: true,
+            page_rect_screen: None,
+            repaint_requested: false,
+            pending_scroll,
+        }
+    }
+
+    fn glyph_center(glyph: &GlyphBox) -> PointsPos {
+        PointsPos {
+            x: glyph.bbox.x + glyph.bbox.width / 2.0,
+            y: glyph.bbox.y + glyph.bbox.height / 2.0,
         }
     }
 
@@ -521,6 +598,7 @@ mod tests {
         };
         let event = crate::PointerEvent {
             pos_in_page_pt: PointsPos { x: 3.0, y: 5.0 },
+            inside_page_rect: true,
             primary_down: false,
             modifiers: egui::Modifiers::NONE,
             click_count: 2,
@@ -535,5 +613,104 @@ mod tests {
         assert!(word.is_some());
         assert_eq!(word.expect("word exists").start_char, 0);
         assert_eq!(word.expect("word exists").end_char, 2);
+    }
+
+    #[test]
+    fn mousedown_outside_text_inside_page_clears_and_consumes() {
+        let doc = load_hello_document();
+        let egui_ctx = Context::default();
+        let ctx = test_context(Some(&doc), &egui_ctx);
+        let page = PageIndex(0);
+        let page_size = doc.page_size(page).expect("page size");
+        let mut selection = Some(SelectionRange {
+            start: CharIndex { page, char: 0 },
+            end: CharIndex { page, char: 1 },
+        });
+        let mut anchor = Some(CharIndex { page, char: 0 });
+        let event = crate::PointerEvent {
+            pos_in_page_pt: PointsPos {
+                x: page_size.width_pt - 5.0,
+                y: page_size.height_pt - 5.0,
+            },
+            inside_page_rect: true,
+            primary_down: true,
+            modifiers: egui::Modifiers::NONE,
+            click_count: 1,
+        };
+
+        let consumed = apply_pointer_event(&mut selection, &mut anchor, page, &event, &ctx);
+
+        assert!(consumed);
+        assert_eq!(selection, None);
+        assert_eq!(anchor, None);
+    }
+
+    #[test]
+    fn mousedown_outside_page_clears_but_does_not_consume() {
+        let doc = load_hello_document();
+        let egui_ctx = Context::default();
+        let ctx = test_context(Some(&doc), &egui_ctx);
+        let page = PageIndex(0);
+        let page_size = doc.page_size(page).expect("page size");
+        let mut selection = Some(SelectionRange {
+            start: CharIndex { page, char: 0 },
+            end: CharIndex { page, char: 1 },
+        });
+        let mut anchor = Some(CharIndex { page, char: 0 });
+        let event = crate::PointerEvent {
+            pos_in_page_pt: PointsPos {
+                x: page_size.width_pt + 5.0,
+                y: page_size.height_pt + 5.0,
+            },
+            inside_page_rect: false,
+            primary_down: true,
+            modifiers: egui::Modifiers::NONE,
+            click_count: 1,
+        };
+
+        let consumed = apply_pointer_event(&mut selection, &mut anchor, page, &event, &ctx);
+
+        assert!(!consumed);
+        assert_eq!(selection, None);
+        assert_eq!(anchor, None);
+    }
+
+    #[test]
+    fn command_mousedown_on_hit_extends_existing_selection() {
+        let doc = load_hello_document();
+        let egui_ctx = Context::default();
+        let ctx = test_context(Some(&doc), &egui_ctx);
+        let page = PageIndex(0);
+        let text = doc.page_text(page).expect("page text");
+        assert!(
+            text.glyphs.len() >= 2,
+            "hello.pdf should expose at least two glyphs"
+        );
+        let start = CharIndex { page, char: 0 };
+        let click_char = CharIndex { page, char: 1 };
+        let mut selection = Some(SelectionRange {
+            start,
+            end: CharIndex { page, char: 1 },
+        });
+        let mut anchor = None;
+        let event = crate::PointerEvent {
+            pos_in_page_pt: glyph_center(&text.glyphs[click_char.char]),
+            inside_page_rect: true,
+            primary_down: true,
+            modifiers: egui::Modifiers::COMMAND,
+            click_count: 1,
+        };
+
+        let consumed = apply_pointer_event(&mut selection, &mut anchor, page, &event, &ctx);
+
+        assert!(consumed);
+        assert_eq!(anchor, Some(click_char));
+        assert_eq!(
+            selection,
+            Some(SelectionRange {
+                start,
+                end: CharIndex { page, char: 2 },
+            })
+        );
     }
 }

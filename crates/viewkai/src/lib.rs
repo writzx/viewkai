@@ -936,6 +936,7 @@ impl Viewer {
         } else {
             None
         }?;
+        let inside_page_rect = page_rect.contains(pointer_pos);
 
         let click_count = if response.triple_clicked() {
             3
@@ -952,6 +953,7 @@ impl Viewer {
                 x: (pointer_pos.x - page_rect.min.x) / effective_zoom,
                 y: (pointer_pos.y - page_rect.min.y) / effective_zoom,
             },
+            inside_page_rect,
             primary_down: ui.input(|input| input.pointer.primary_down()),
             modifiers: ui.input(|input| input.modifiers),
             click_count,
