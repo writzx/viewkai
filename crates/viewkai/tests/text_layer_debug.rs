@@ -4,7 +4,7 @@ use egui_kittest::Harness;
 use viewkai::Viewer;
 
 #[test]
-fn text_layer_debug_hello() {
+fn snapshot_text_layer_debug_hello() {
     viewkai_engine::init().expect("pdfium init");
     let bytes = include_bytes!("../../../tests/fixtures/hello.pdf").to_vec();
 

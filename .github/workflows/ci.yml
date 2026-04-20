@@ -108,6 +108,8 @@ jobs:
       - run: cargo test -p viewkai --test snapshot_regression -- --test-threads=1
       # Run selection snapshot test sequentially (uses wgpu/lavapipe, must not run concurrently)
       - run: cargo test -p viewkai --test selection_snapshot -- --test-threads=1
+      # Run text-layer debug snapshot test sequentially (uses wgpu/lavapipe, must not run concurrently)
+      - run: cargo test -p viewkai --test text_layer_debug -- --test-threads=1
 
   build-wasm:
     name: build-wasm
