@@ -2,17 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.1.1] — 2026-04-20 — Bugfix Pass
 
-### Changed
-- Phase 0 split the old combined demo crate into `viewkai-app` (native-only) and `viewkai-web` (WASM-only), keeping platform-specific runtime dependencies isolated.
+### Fixed
+
+- Per-page text-overlay misalignment on pages 2+ (`text_layer.rs`/`search.rs` `page_origin` computation).
+- Find-highlight rectangles drawn over wrong glyphs on pages 2+ (same root cause as above).
+- Clicking inside a page area but outside any glyph now clears selection (blur semantics).
+- Starting a new selection without `Cmd`/`Ctrl` clears prior selection; with `Cmd`/`Ctrl` extends it.
+- `viewkai-web` now compiles for `wasm32-unknown-unknown` (`use wasm_bindgen::JsCast` import + wasm32 stub `fn main()`).
+- `viewkai-core` `test-support` feature no longer trips clippy `redundant_feature_names`.
+- `viewkai-plugins` no longer declares unused `thiserror` dep.
+- `cargo fmt --check` clean across `viewkai-web`.
+- `selection_highlight_hello` snapshot regenerated from Linux/lavapipe CI.
 
 ### Added
-- Phase 0.5 introduced the `viewkai-plugins` workspace crate with a sealed `ViewerPlugin` trait, no-op built-in `TextLayerPlugin` / `SearchPlugin` stubs, and `Viewer` accessors plus dispatch hooks that preserve existing rendering output byte-for-byte.
 
-### CI
-- `build-wasm` now builds `viewkai-web`, and new `purity-app` / `purity-web` jobs enforce native-vs-WASM dependency boundaries.
-- New `purity-plugins` job asserts `viewkai-plugins` stays `eframe`-free and does not surface `pdfium_render`.
+- `console_error_panic_hook` in `viewkai-web` surfaces WASM panics to the browser console.
+- `viewkai-web` auto-loads bundled `hello.pdf` on startup so the public demo opens with rendered content.
+- `F3` / `Shift+F3` (and `Cmd/Ctrl+G` / `Cmd/Ctrl+Shift+G`) global keyboard shortcuts for find next/prev in both `viewkai-app` and `viewkai-web`.
+- ▲▼ navigation buttons in the find overlay.
+
+### Internal
+
+- `PluginContext` gains `page_rect_screen: Option<egui::Rect>` for plugins that paint absolute-positioned per-page overlays.
+- `PointerEvent` gains `inside_page_rect: bool` so plugins can distinguish "click in page, miss text" from "click outside page".
+
+### Notes
+
+- No public API breakage. The two new struct fields are non-breaking additions because the structs are constructed only by `viewkai`'s own code via the sealed plugin trait surface.
 
 ## [0.1.0] — 2026-04-20 — Text & Interaction (Plugin Architecture)
 
