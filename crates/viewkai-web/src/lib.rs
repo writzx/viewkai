@@ -19,6 +19,9 @@ mod wasm_state;
 mod zoom_ui;
 
 #[cfg(target_arch = "wasm32")]
+const DEFAULT_PDF: &[u8] = include_bytes!("../../../tests/fixtures/hello.pdf");
+
+#[cfg(target_arch = "wasm32")]
 /// Current loading lifecycle for the web demo application.
 pub enum DemoLoadState {
     /// No document is loaded and no load is in progress.
@@ -389,6 +392,7 @@ impl eframe::App for DemoApp {
 #[cfg(target_arch = "wasm32")]
 /// Run the WebAssembly demo application.
 pub fn run() {
+    console_error_panic_hook::set_once();
     wasm_bindgen_futures::spawn_local(async {
         wait_for_pdfium_module().await;
 
@@ -414,7 +418,12 @@ pub fn run() {
             .start(
                 canvas,
                 eframe::WebOptions::default(),
-                Box::new(|cc| Ok(Box::new(DemoApp::new(cc)))),
+                Box::new(|cc| {
+                    let mut app = DemoApp::new(cc);
+                    app.load_bytes_sync(DEFAULT_PDF.to_vec())
+                        .expect("default hello.pdf bundled with binary should always parse");
+                    Ok(Box::new(app))
+                }),
             )
             .await
             .expect("Failed to start eframe web runner");
