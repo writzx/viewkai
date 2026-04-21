@@ -102,6 +102,14 @@ const SHORTCUT_FIND_PREV: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::F3);
 const SHORTCUT_FIND_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F3);
+const SHORTCUT_OUTLINE_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers {
+        ctrl: true,
+        shift: true,
+        ..egui::Modifiers::NONE
+    },
+    egui::Key::O,
+);
 
 impl App {
     /// Create a new native app instance.
@@ -309,6 +317,10 @@ impl App {
         if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT)) {
             self.viewer.next_match();
         }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_OUTLINE_TOGGLE)) {
+            let is_visible = self.viewer.outline().visible();
+            self.viewer.outline_mut().set_visible(!is_visible);
+        }
     }
 
     fn apply_shortcut_action(&mut self, action: &ShortcutAction) {
@@ -386,6 +398,18 @@ impl eframe::App for App {
                         }
                     });
             });
+
+        if self.viewer.outline().visible() {
+            egui::Panel::left("viewkai.sidebar")
+                .default_size(260.0)
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                    ui.heading("Outline");
+                    ui.separator();
+                    let doc = self.viewer.document_arc();
+                    self.viewer.outline_mut().render_panel(ui, doc.as_deref());
+                });
+        }
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
             let scroll_delta = ui.input(|i| {

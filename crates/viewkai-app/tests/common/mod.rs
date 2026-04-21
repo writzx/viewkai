@@ -10,6 +10,7 @@ pub(crate) fn demo_harness() -> Harness<'static, App> {
         .build_eframe(|cc| App::new(cc))
 }
 
+#[allow(dead_code)]
 pub(crate) fn demo_harness_with_hello() -> Harness<'static, App> {
     let mut h = demo_harness();
     let bytes = include_bytes!("../../../../tests/fixtures/hello.pdf").to_vec();
@@ -18,10 +19,20 @@ pub(crate) fn demo_harness_with_hello() -> Harness<'static, App> {
     h
 }
 
+#[allow(dead_code)]
 pub(crate) fn demo_harness_with_500page() -> Harness<'static, App> {
     let mut h = demo_harness();
     let bytes = include_bytes!("../../../../tests/fixtures/500page.pdf").to_vec();
     h.state_mut().load_bytes_sync(bytes).expect("load 500page");
+    h.run_ok();
+    h
+}
+
+#[allow(dead_code)]
+pub(crate) fn demo_harness_with_bookmarks() -> Harness<'static, App> {
+    let mut h = demo_harness();
+    let bytes = include_bytes!("../../../../tests/fixtures/bookmarks.pdf").to_vec();
+    h.state_mut().load_bytes_sync(bytes).expect("load bookmarks");
     h.run_ok();
     h
 }

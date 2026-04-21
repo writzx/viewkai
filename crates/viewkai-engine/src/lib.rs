@@ -22,6 +22,8 @@ pub mod error;
 pub mod search;
 /// Text extraction support built on top of pdfium-render.
 pub mod text;
+/// Document outline extraction support built on top of pdfium-render.
+pub mod outline;
 
 use crate::error::{EngineError, Result};
 use pdfium_render::prelude::*;
@@ -30,8 +32,9 @@ use std::{
     pin::Pin,
     sync::{Arc as StdArc, Mutex, OnceLock},
 };
-use viewkai_core::{PageIndex, PageSize, PageText, RawImage};
+use viewkai_core::{Outline, PageIndex, PageSize, PageText, RawImage};
 
+pub use outline::extract_outline;
 pub use search::search_page;
 pub use text::extract_page_text;
 
@@ -129,6 +132,7 @@ pub struct Document {
     page_count: usize,
     page_sizes: Vec<PageSize>,
     page_text_cache: Mutex<HashMap<PageIndex, StdArc<PageText>>>,
+    outline_cache: OnceLock<StdArc<Outline>>,
 }
 
 impl Document {
@@ -217,6 +221,7 @@ impl Document {
             page_count: count,
             page_sizes: sizes,
             page_text_cache: Mutex::new(HashMap::new()),
+            outline_cache: OnceLock::new(),
         })
     }
 
@@ -291,6 +296,18 @@ impl Document {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clear();
+    }
+
+    /// Return the extracted outline for this document, using a cache.
+    pub fn outline(&self) -> Result<StdArc<Outline>> {
+        if let Some(cached) = self.outline_cache.get() {
+            return Ok(StdArc::clone(cached));
+        }
+
+        let outline = StdArc::new(crate::outline::extract_outline(self)?);
+        let _ = self.outline_cache.set(StdArc::clone(&outline));
+
+        Ok(outline)
     }
 }
 

@@ -5,6 +5,8 @@ pub const NAME: &str = "viewkai-core";
 
 /// Common error types used across the workspace.
 pub mod error;
+/// Document outline (table of contents) types.
+pub mod outline;
 /// Shared search data types.
 pub mod search;
 /// Shared text extraction data types.
@@ -15,6 +17,7 @@ pub mod types;
 pub mod view_mode;
 
 pub use error::*;
+pub use outline::{Destination, DestPosition, Outline, OutlineNode, OutlineNodeId};
 pub use search::{SearchMatch, SearchQuery, SearchState};
 pub use text::{CharIndex, CharSpan, GlyphBox, LineSpan, PageText, SelectionRange, WordSpan};
 pub use types::*;

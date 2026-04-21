@@ -29,13 +29,14 @@ use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 const NO_VISIBLE_PAGES: &[PageIndex] = &[];
 
 use std::{cell::Cell, sync::Arc};
-use viewkai_core::{PageIndex, PageText, PointsRect, SelectionRange};
+use viewkai_core::{Outline, PageIndex, PageText, PointsRect, SelectionRange};
 use viewkai_engine::{Document, error::EngineError};
 use viewkai_plugins::PluginRegistry;
 
+pub use viewkai_core::outline::{Destination, DestPosition, OutlineNode, OutlineNodeId};
 pub use viewkai_core::ViewMode;
 pub use viewkai_plugins::{
-    PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ViewerPlugin,
+    OutlinePlugin, PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ViewerPlugin,
 };
 
 /// Per-page rendering state.
@@ -109,6 +110,7 @@ impl Viewer {
             plugins: PluginRegistry::new(vec![
                 Box::new(TextLayerPlugin::new()),
                 Box::new(SearchPlugin::new()),
+                Box::new(OutlinePlugin::new()),
             ]),
             pending_scroll: Cell::new(None),
             selection_color: Color32::from_rgba_unmultiplied(70, 120, 210, 96),
@@ -195,6 +197,31 @@ impl Viewer {
         match self.plugins.get_mut::<SearchPlugin>() {
             Some(plugin) => plugin,
             None => panic!("SearchPlugin is always registered"),
+        }
+    }
+
+    /// Returns a shared reference to the built-in outline plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the outline plugin is not registered.
+    #[must_use]
+    pub fn outline(&self) -> &OutlinePlugin {
+        match self.plugins.get::<OutlinePlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("OutlinePlugin is always registered"),
+        }
+    }
+
+    /// Returns a mutable reference to the built-in outline plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the outline plugin is not registered.
+    pub fn outline_mut(&mut self) -> &mut OutlinePlugin {
+        match self.plugins.get_mut::<OutlinePlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("OutlinePlugin is always registered"),
         }
     }
 
@@ -317,6 +344,26 @@ impl Viewer {
             &self.pending_scroll,
         );
         self.text_layer().selected_text(&ctx)
+    }
+
+    /// Return the loaded document handle, if any.
+    #[must_use]
+    pub fn document_arc(&self) -> Option<Arc<Document>> {
+        self.current_document_handle()
+    }
+
+    /// Return the loaded document outline, if any.
+    #[must_use]
+    pub fn outline_document(&self) -> Option<Arc<Outline>> {
+        match &self.state {
+            ViewerState::Loaded { document, .. } => document.outline().ok(),
+            ViewerState::Empty | ViewerState::Error(_) => None,
+        }
+    }
+
+    /// Queue navigation to an outline destination.
+    pub fn goto_destination(&mut self, dest: Destination) {
+        self.outline_mut().set_pending_destination(dest);
     }
 
     /// Copy the selected text to the clipboard.
@@ -1065,4 +1112,14 @@ impl Viewer {
 #[must_use]
 pub fn library_name() -> &'static str {
     NAME
+}
+
+/// Initialise the PDF engine.
+///
+/// Must be called once before loading any document. Safe to call multiple times.
+///
+/// # Errors
+/// Returns an error if the pdfium library cannot be loaded.
+pub fn init() -> viewkai_core::Result<()> {
+    viewkai_engine::init().map_err(|err| viewkai_core::Error::Engine(err.to_string()))
 }

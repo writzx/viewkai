@@ -39,6 +39,15 @@ const SHORTCUT_FIND_PREV: egui::KeyboardShortcut =
 #[cfg(target_arch = "wasm32")]
 const SHORTCUT_FIND_NEXT: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::F3);
+#[cfg(target_arch = "wasm32")]
+const SHORTCUT_OUTLINE_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers {
+        ctrl: true,
+        shift: true,
+        ..egui::Modifiers::NONE
+    },
+    egui::Key::O,
+);
 
 #[cfg(target_arch = "wasm32")]
 /// Current loading lifecycle for the web demo application.
@@ -317,6 +326,10 @@ impl eframe::App for DemoApp {
         if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_FIND_NEXT)) {
             self.viewer.next_match();
         }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_OUTLINE_TOGGLE)) {
+            let is_visible = self.viewer.outline().visible();
+            self.viewer.outline_mut().set_visible(!is_visible);
+        }
 
         self.poll_pending_bytes();
 
@@ -385,6 +398,18 @@ impl eframe::App for DemoApp {
                         }
                     });
             });
+
+        if self.viewer.outline().visible() {
+            egui::Panel::left("viewkai.sidebar")
+                .default_size(260.0)
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                    ui.heading("Outline");
+                    ui.separator();
+                    let doc = self.viewer.document_arc();
+                    self.viewer.outline_mut().render_panel(ui, doc.as_deref());
+                });
+        }
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
             self.maybe_load_from_drop(ui);

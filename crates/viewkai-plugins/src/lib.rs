@@ -6,11 +6,13 @@
 
 #![warn(missing_docs)]
 
+mod outline;
 mod plugin;
 mod registry;
 mod search;
 mod text_layer;
 
+pub use outline::OutlinePlugin;
 pub use plugin::{PluginContext, PointerEvent, ViewerPlugin};
 pub use registry::PluginRegistry;
 pub use search::SearchPlugin;
