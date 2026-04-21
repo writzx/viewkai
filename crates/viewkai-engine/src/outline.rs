@@ -3,7 +3,7 @@
 use pdfium_render::prelude::PdfDestinationViewSettings;
 use viewkai_core::{
     Outline, OutlineNode, OutlineNodeId, PageIndex, PointsRect,
-    outline::{Destination, DestPosition},
+    outline::{DestPosition, Destination},
 };
 
 use crate::Document;
