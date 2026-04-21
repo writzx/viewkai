@@ -1,7 +1,7 @@
 //! Selection blur integration coverage.
 
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 use egui_kittest::Harness;
 use viewkai::{PluginContext, PointerEvent, Viewer, ViewerPlugin};

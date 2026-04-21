@@ -2,15 +2,7 @@ use crate::{PageSize, PointsPos, PointsRect};
 
 /// Display-time page rotation (does NOT modify the underlying PDF).
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    Default,
-    serde::Serialize,
-    serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
 )]
 pub enum PdfPageRotation {
     /// No rotation (0°).
@@ -152,12 +144,18 @@ pub fn forward_rotate_rect(
     ]
     .map(|point| forward_rotate_point(point, rotation, page_size));
 
-    let min_x = corners.iter().map(|point| point.x).fold(f32::INFINITY, f32::min);
+    let min_x = corners
+        .iter()
+        .map(|point| point.x)
+        .fold(f32::INFINITY, f32::min);
     let max_x = corners
         .iter()
         .map(|point| point.x)
         .fold(f32::NEG_INFINITY, f32::max);
-    let min_y = corners.iter().map(|point| point.y).fold(f32::INFINITY, f32::min);
+    let min_y = corners
+        .iter()
+        .map(|point| point.y)
+        .fold(f32::INFINITY, f32::min);
     let max_y = corners
         .iter()
         .map(|point| point.y)

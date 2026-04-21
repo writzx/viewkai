@@ -9,8 +9,6 @@ pub(crate) struct WasmState {
 
 impl Default for WasmState {
     fn default() -> Self {
-        Self {
-            pending_load: None,
-        }
+        Self { pending_load: None }
     }
 }

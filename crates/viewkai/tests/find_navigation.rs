@@ -1,7 +1,7 @@
 //! Find navigation regression coverage.
 
-use std::{cell::Cell, sync::Mutex};
 use std::collections::HashMap;
+use std::{cell::Cell, sync::Mutex};
 
 use egui_kittest::Harness;
 use viewkai::{PluginContext, Viewer};

@@ -168,16 +168,14 @@ impl ThumbnailPlugin {
                 ui.vertical(|ui| {
                     let preview_height = self.preview_height_for(doc, page);
                     let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
-                    let (rect, response) = ui.allocate_exact_size(preview_size, egui::Sense::click());
+                    let (rect, response) =
+                        ui.allocate_exact_size(preview_size, egui::Sense::click());
 
                     if let Some(texture) = texture {
                         ui.painter().image(
                             texture.id(),
                             rect,
-                            egui::Rect::from_min_max(
-                                egui::pos2(0.0, 0.0),
-                                egui::pos2(1.0, 1.0),
-                            ),
+                            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                             Color32::WHITE,
                         );
                     } else {
@@ -310,12 +308,9 @@ impl ViewerPlugin for ThumbnailPlugin {
                 continue;
             }
 
-            if let Ok(raw) = viewkai_engine::render_thumbnail(
-                document,
-                page,
-                self.thumbnail_width,
-                rotation,
-            ) {
+            if let Ok(raw) =
+                viewkai_engine::render_thumbnail(document, page, self.thumbnail_width, rotation)
+            {
                 let byte_size = raw.pixels.len();
                 let image = egui::ColorImage::from_rgba_unmultiplied(
                     [raw.width as usize, raw.height as usize],

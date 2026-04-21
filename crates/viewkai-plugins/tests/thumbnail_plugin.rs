@@ -57,14 +57,12 @@ fn run_cache_frame(ui: &mut egui::Ui, state: &mut CacheState) {
         &state.pending_scroll,
     );
     state.plugin.on_frame_update(&mut ctx);
-    state.last_texture = state
-        .plugin
-        .thumbnail_texture(
-            ui,
-            &state.doc,
-            state.requested_page,
-            viewkai_core::PdfPageRotation::None,
-        );
+    state.last_texture = state.plugin.thumbnail_texture(
+        ui,
+        &state.doc,
+        state.requested_page,
+        viewkai_core::PdfPageRotation::None,
+    );
 }
 
 #[test]
@@ -72,14 +70,19 @@ fn thumbnail_cache_evicts_to_budget() {
     pdfium_once();
 
     let doc = load_doc("500page");
-    let mut harness = Harness::builder().build_ui_state(run_cache_frame, CacheState::new(doc, PageIndex(0)));
+    let mut harness =
+        Harness::builder().build_ui_state(run_cache_frame, CacheState::new(doc, PageIndex(0)));
 
     harness.state_mut().plugin.set_cache_budget(90_000);
 
     for page in [PageIndex(0), PageIndex(1), PageIndex(2), PageIndex(3)] {
         harness.state_mut().requested_page = page;
         harness.run_steps(2);
-        assert!(harness.state().last_texture.is_some(), "page {} should render", page.0);
+        assert!(
+            harness.state().last_texture.is_some(),
+            "page {} should render",
+            page.0
+        );
         assert!(harness.state().plugin.cache_bytes() <= 90_000);
     }
 }
@@ -89,7 +92,8 @@ fn thumbnail_cache_hit_updates_lru() {
     pdfium_once();
 
     let doc = load_doc("500page");
-    let mut harness = Harness::builder().build_ui_state(run_cache_frame, CacheState::new(doc, PageIndex(0)));
+    let mut harness =
+        Harness::builder().build_ui_state(run_cache_frame, CacheState::new(doc, PageIndex(0)));
 
     harness.state_mut().plugin.set_cache_budget(150_000);
 
@@ -131,7 +135,10 @@ fn thumbnail_cache_hit_updates_lru() {
 
     harness.state_mut().requested_page = PageIndex(1);
     harness.run_steps(1);
-    assert!(harness.state().last_texture.is_none(), "page 1 should be evicted first");
+    assert!(
+        harness.state().last_texture.is_none(),
+        "page 1 should be evicted first"
+    );
 }
 
 #[test]
@@ -159,5 +166,8 @@ fn render_panel_click_queues_navigation() {
     harness.get_by_label("Page 2").click();
     harness.run_ok();
 
-    assert_eq!(harness.state().plugin.pending_click_page(), Some(PageIndex(1)));
+    assert_eq!(
+        harness.state().plugin.pending_click_page(),
+        Some(PageIndex(1))
+    );
 }

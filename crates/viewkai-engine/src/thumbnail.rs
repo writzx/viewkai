@@ -1,6 +1,9 @@
 //! Thumbnail rendering helpers.
 
-use crate::{Document, PDFIUM_OP_LOCK, error::{EngineError, Result}};
+use crate::{
+    Document, PDFIUM_OP_LOCK,
+    error::{EngineError, Result},
+};
 use pdfium_render::prelude::*;
 use viewkai_core::{PageIndex, PdfPageRotation, RawImage};
 

@@ -22,7 +22,9 @@ fn empty_pdf_has_no_outline() {
 #[test]
 fn fixture_pdf_with_bookmarks_extracts_tree() {
     if init().is_err() {
-        eprintln!("fixture_pdf_with_bookmarks_extracts_tree: skipped — pdfium library not available");
+        eprintln!(
+            "fixture_pdf_with_bookmarks_extracts_tree: skipped — pdfium library not available"
+        );
         return;
     }
 

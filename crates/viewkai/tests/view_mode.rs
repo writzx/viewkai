@@ -58,7 +58,10 @@ fn viewer_switching_to_continuous_keeps_single_anchor_page() {
     h.state_mut().set_view_mode(ViewMode::Continuous);
     h.run_ok();
 
-    assert_eq!(h.state().visible_pages().first().copied(), Some(viewkai_core::PageIndex(17)));
+    assert_eq!(
+        h.state().visible_pages().first().copied(),
+        Some(viewkai_core::PageIndex(17))
+    );
 }
 
 #[test]
@@ -73,5 +76,8 @@ fn viewer_switching_to_continuous_keeps_spread_anchor_page() {
     h.state_mut().set_view_mode(ViewMode::Continuous);
     h.run_ok();
 
-    assert_eq!(h.state().visible_pages().first().copied(), Some(viewkai_core::PageIndex(21)));
+    assert_eq!(
+        h.state().visible_pages().first().copied(),
+        Some(viewkai_core::PageIndex(21))
+    );
 }

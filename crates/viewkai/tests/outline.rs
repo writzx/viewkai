@@ -1,6 +1,6 @@
 //! Viewer outline integration tests.
 
-use viewkai::{Destination, DestPosition, Viewer, ViewerPlugin};
+use viewkai::{DestPosition, Destination, Viewer, ViewerPlugin};
 use viewkai_core::PageIndex;
 
 #[test]

@@ -19,7 +19,7 @@ pub mod types;
 pub mod view_mode;
 
 pub use error::*;
-pub use outline::{Destination, DestPosition, Outline, OutlineNode, OutlineNodeId};
+pub use outline::{DestPosition, Destination, Outline, OutlineNode, OutlineNodeId};
 pub use rotation::{
     PdfPageRotation, RotationDelta, forward_rotate_point, forward_rotate_rect,
     inverse_rotate_point, rotated_page_size,

@@ -18,12 +18,12 @@ pub const NAME: &str = "viewkai-engine";
 
 /// Error types and result aliases for engine operations.
 pub mod error;
+/// Document outline extraction support built on top of pdfium-render.
+pub mod outline;
 /// Full-text search support built on top of pdfium-render.
 pub mod search;
 /// Text extraction support built on top of pdfium-render.
 pub mod text;
-/// Document outline extraction support built on top of pdfium-render.
-pub mod outline;
 /// Thumbnail rendering support built on top of pdfium-render.
 pub mod thumbnail;
 
@@ -38,8 +38,8 @@ use viewkai_core::{Outline, PageIndex, PageSize, PageText, PdfPageRotation, RawI
 
 pub use outline::extract_outline;
 pub use search::search_page;
-pub use thumbnail::render_thumbnail;
 pub use text::extract_page_text;
+pub use thumbnail::render_thumbnail;
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────
 

@@ -32,7 +32,9 @@ pub(crate) fn demo_harness_with_500page() -> Harness<'static, App> {
 pub(crate) fn demo_harness_with_bookmarks() -> Harness<'static, App> {
     let mut h = demo_harness();
     let bytes = include_bytes!("../../../../tests/fixtures/bookmarks.pdf").to_vec();
-    h.state_mut().load_bytes_sync(bytes).expect("load bookmarks");
+    h.state_mut()
+        .load_bytes_sync(bytes)
+        .expect("load bookmarks");
     h.run_ok();
     h
 }

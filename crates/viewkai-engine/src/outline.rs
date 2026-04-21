@@ -76,11 +76,9 @@ fn map_destination(dest: &pdfium_render::prelude::PdfDestination<'_>) -> Result<
                 y_pt: y.map(|value| value.value),
             })
         }
-        PdfDestinationViewSettings::FitPageVerticallyToWindow(x) => {
-            Some(DestPosition::FitHeight {
-                x_pt: x.map(|value| value.value),
-            })
-        }
+        PdfDestinationViewSettings::FitPageVerticallyToWindow(x) => Some(DestPosition::FitHeight {
+            x_pt: x.map(|value| value.value),
+        }),
         PdfDestinationViewSettings::FitPageToRectangle(rect) => Some(DestPosition::FitRect {
             bbox: PointsRect {
                 x: rect.left().value,

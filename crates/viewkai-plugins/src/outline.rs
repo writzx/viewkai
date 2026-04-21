@@ -3,7 +3,7 @@
 use std::{collections::HashSet, sync::Arc};
 
 use egui::{CollapsingHeader, RichText, ScrollArea, Ui};
-use viewkai_core::{Destination, DestPosition, Outline, OutlineNodeId, PageIndex, PointsRect};
+use viewkai_core::{DestPosition, Destination, Outline, OutlineNodeId, PageIndex, PointsRect};
 use viewkai_engine::Document;
 
 use crate::{PluginContext, ViewerPlugin, sealed};

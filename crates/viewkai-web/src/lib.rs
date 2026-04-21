@@ -76,9 +76,7 @@ enum SidebarTab {
 enum LoadEvent {
     BytesReceived(PendingLoad),
     LoadSucceeded,
-    LoadFailed {
-        message: String,
-    },
+    LoadFailed { message: String },
     Reset,
 }
 
@@ -95,11 +93,7 @@ const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
         egui::Key::O,
         ShortcutAction::OpenFile,
     ),
-    (
-        egui::Modifiers::CTRL,
-        egui::Key::L,
-        ShortcutAction::OpenUrl,
-    ),
+    (egui::Modifiers::CTRL, egui::Key::L, ShortcutAction::OpenUrl),
     (
         egui::Modifiers::CTRL,
         egui::Key::W,
@@ -408,8 +402,15 @@ impl DemoApp {
     fn document_name_from_url(url: &str) -> Option<String> {
         let trimmed = url.trim();
         let without_fragment = trimmed.split('#').next().unwrap_or(trimmed);
-        let without_query = without_fragment.split('?').next().unwrap_or(without_fragment);
-        let name = without_query.rsplit('/').next().unwrap_or(without_query).trim();
+        let without_query = without_fragment
+            .split('?')
+            .next()
+            .unwrap_or(without_fragment);
+        let name = without_query
+            .rsplit('/')
+            .next()
+            .unwrap_or(without_query)
+            .trim();
         (!name.is_empty()).then(|| name.to_owned())
     }
 
@@ -559,7 +560,10 @@ impl DemoApp {
             .selected_text(Self::view_mode_label(self.viewer.view_mode()))
             .show_ui(ui, |ui| {
                 for (label, mode) in VIEW_MODE_OPTIONS {
-                    if ui.selectable_label(self.viewer.view_mode() == mode, label).clicked() {
+                    if ui
+                        .selectable_label(self.viewer.view_mode() == mode, label)
+                        .clicked()
+                    {
                         self.viewer.set_view_mode(mode);
                     }
                 }
@@ -603,7 +607,10 @@ impl DemoApp {
                     }
 
                     let mut show_thumbnails = self.viewer.thumbnails().visible();
-                    if ui.checkbox(&mut show_thumbnails, "Show Thumbnails").clicked() {
+                    if ui
+                        .checkbox(&mut show_thumbnails, "Show Thumbnails")
+                        .clicked()
+                    {
                         self.toggle_thumbnails_visible(show_thumbnails);
                     }
                 });
@@ -685,7 +692,10 @@ impl DemoApp {
                     if ui.button("Cancel").clicked() {
                         cancel = true;
                     }
-                    if ui.add_enabled(can_submit, egui::Button::new("Open")).clicked() {
+                    if ui
+                        .add_enabled(can_submit, egui::Button::new("Open"))
+                        .clicked()
+                    {
                         submit = true;
                     }
                 });
@@ -812,9 +822,10 @@ impl eframe::App for DemoApp {
                         SidebarTab::Outline => {
                             self.viewer.outline_mut().render_panel(ui, doc.as_deref())
                         }
-                        SidebarTab::Thumbnails => {
-                            self.viewer.thumbnails_mut().render_panel(ui, doc.as_deref())
-                        }
+                        SidebarTab::Thumbnails => self
+                            .viewer
+                            .thumbnails_mut()
+                            .render_panel(ui, doc.as_deref()),
                     }
                 });
         }
@@ -868,7 +879,9 @@ fn trigger_file_picker(
     sink_slot: &mut Option<PendingLoadSink>,
 ) -> Result<(), String> {
     let window = web_sys::window().ok_or_else(|| "missing window".to_owned())?;
-    let document = window.document().ok_or_else(|| "missing document".to_owned())?;
+    let document = window
+        .document()
+        .ok_or_else(|| "missing document".to_owned())?;
     let input = document
         .get_element_by_id("viewkai-file-input")
         .ok_or_else(|| "missing #viewkai-file-input".to_owned())?

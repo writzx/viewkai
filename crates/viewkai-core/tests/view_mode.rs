@@ -16,7 +16,12 @@ fn view_mode_serde_spread_true() {
     })
     .unwrap();
     let decoded: ViewMode = serde_json::from_str(&json).unwrap();
-    assert_eq!(decoded, ViewMode::Spread { cover_separate: true });
+    assert_eq!(
+        decoded,
+        ViewMode::Spread {
+            cover_separate: true
+        }
+    );
 }
 
 #[test]
@@ -26,7 +31,12 @@ fn view_mode_serde_spread_false() {
     })
     .unwrap();
     let decoded: ViewMode = serde_json::from_str(&json).unwrap();
-    assert_eq!(decoded, ViewMode::Spread { cover_separate: false });
+    assert_eq!(
+        decoded,
+        ViewMode::Spread {
+            cover_separate: false
+        }
+    );
 }
 
 #[test]

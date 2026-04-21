@@ -30,15 +30,14 @@ const NO_VISIBLE_PAGES: &[PageIndex] = &[];
 
 use std::{cell::Cell, collections::HashMap, sync::Arc};
 use viewkai_core::{
-    Outline, PageSize, PageText, PointsRect, SelectionRange, forward_rotate_rect,
-    rotated_page_size,
+    Outline, PageSize, PageText, PointsRect, SelectionRange, forward_rotate_rect, rotated_page_size,
 };
 use viewkai_engine::{Document, error::EngineError};
 use viewkai_plugins::PluginRegistry;
 
-pub use viewkai_core::outline::{Destination, DestPosition, OutlineNode, OutlineNodeId};
-pub use viewkai_core::{PageIndex, PdfPageRotation, RotationDelta};
 pub use viewkai_core::ViewMode;
+pub use viewkai_core::outline::{DestPosition, Destination, OutlineNode, OutlineNodeId};
+pub use viewkai_core::{PageIndex, PdfPageRotation, RotationDelta};
 pub use viewkai_plugins::{
     OutlinePlugin, PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ThumbnailPlugin,
     ViewerPlugin,
@@ -162,9 +161,8 @@ impl Viewer {
                     .or_else(|| Self::clamp_page_index(page_count, 0));
             }
             ViewMode::Spread { cover_separate } => {
-                self.current_spread_index = anchor_page.map(|page| {
-                    Self::spread_index_for_page(page_count, cover_separate, page.0)
-                });
+                self.current_spread_index = anchor_page
+                    .map(|page| Self::spread_index_for_page(page_count, cover_separate, page.0));
             }
             ViewMode::Continuous => {
                 self.pending_scroll_to_page = anchor_page.map(|page| page.0);
@@ -220,9 +218,8 @@ impl Viewer {
                         Self::spread_index_for_page(page_count, cover_separate, page.0)
                     })
                 });
-                self.current_spread_index = Some(
-                    (current + 1).min(Self::spread_count(page_count, cover_separate) - 1),
-                );
+                self.current_spread_index =
+                    Some((current + 1).min(Self::spread_count(page_count, cover_separate) - 1));
             }
             ViewMode::Continuous => {}
         }
@@ -1009,8 +1006,10 @@ impl Viewer {
                 let (content_rect, _) = ui.allocate_exact_size(content_size, Sense::hover());
                 let page_rect = Rect::from_min_size(
                     egui::pos2(
-                        content_rect.min.x + ((content_rect.width() - display_size.x) / 2.0).max(0.0),
-                        content_rect.min.y + ((content_rect.height() - display_size.y) / 2.0).max(0.0),
+                        content_rect.min.x
+                            + ((content_rect.width() - display_size.x) / 2.0).max(0.0),
+                        content_rect.min.y
+                            + ((content_rect.height() - display_size.y) / 2.0).max(0.0),
                     ),
                     display_size,
                 );
@@ -1231,14 +1230,13 @@ impl Viewer {
         }
 
         let spread_count = Self::spread_count(pages.len(), cover_separate);
-        let mut spread_idx = current_spread_index.unwrap_or(0).min(spread_count.saturating_sub(1));
+        let mut spread_idx = current_spread_index
+            .unwrap_or(0)
+            .min(spread_count.saturating_sub(1));
         if library_shortcuts_enabled {
-            let prev = ui.input_mut(|i| {
-                i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowLeft)
-            });
-            let next = ui.input_mut(|i| {
-                i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowRight)
-            });
+            let prev = ui.input_mut(|i| i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowLeft));
+            let next =
+                ui.input_mut(|i| i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowRight));
 
             if prev {
                 spread_idx = spread_idx.saturating_sub(1);
@@ -1252,7 +1250,8 @@ impl Viewer {
         egui::ScrollArea::both()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                let (left_idx, right_idx) = Self::spread_pages(pages.len(), cover_separate, spread_idx);
+                let (left_idx, right_idx) =
+                    Self::spread_pages(pages.len(), cover_separate, spread_idx);
                 let left_page = &pages[left_idx];
                 let right_page = right_idx.and_then(|idx| pages.get(idx));
                 let left_rotation = page_rotations
@@ -1272,8 +1271,9 @@ impl Viewer {
                 let spread_width_pt = left_rotated.width_pt
                     + right_rotated.map_or(0.0, |page| page.width_pt)
                     + if right_page.is_some() { 8.0 } else { 0.0 };
-                let spread_height_pt = right_rotated
-                    .map_or(left_rotated.height_pt, |page| left_rotated.height_pt.max(page.height_pt));
+                let spread_height_pt = right_rotated.map_or(left_rotated.height_pt, |page| {
+                    left_rotated.height_pt.max(page.height_pt)
+                });
 
                 let viewport_rect = ui.clip_rect();
                 let effective_zoom = zoom.effective_zoom(
@@ -1291,12 +1291,16 @@ impl Viewer {
                     left_rotated.height_pt * effective_zoom,
                 );
                 let right_size = right_rotated.map(|page| {
-                    Vec2::new(page.width_pt * effective_zoom, page.height_pt * effective_zoom)
+                    Vec2::new(
+                        page.width_pt * effective_zoom,
+                        page.height_pt * effective_zoom,
+                    )
                 });
                 let spread_width_px = left_size.x
                     + right_size.map_or(0.0, |size| size.x)
                     + if right_size.is_some() { 8.0 } else { 0.0 };
-                let spread_height_px = right_size.map_or(left_size.y, |size| left_size.y.max(size.y));
+                let spread_height_px =
+                    right_size.map_or(left_size.y, |size| left_size.y.max(size.y));
                 let content_size = Vec2::new(
                     spread_width_px.max(viewport_rect.width()),
                     spread_height_px.max(viewport_rect.height()),
@@ -1304,7 +1308,8 @@ impl Viewer {
                 let (content_rect, _) = ui.allocate_exact_size(content_size, Sense::hover());
                 let spread_origin = egui::pos2(
                     content_rect.min.x + ((content_rect.width() - spread_width_px) / 2.0).max(0.0),
-                    content_rect.min.y + ((content_rect.height() - spread_height_px) / 2.0).max(0.0),
+                    content_rect.min.y
+                        + ((content_rect.height() - spread_height_px) / 2.0).max(0.0),
                 );
                 let left_rect = Rect::from_min_size(
                     egui::pos2(
@@ -1333,21 +1338,20 @@ impl Viewer {
                             page_state_size(left_page),
                         ))
                     } else if let Some((right_idx, right_rect)) = right_idx.zip(right_rect) {
-                        (page.0 == right_idx)
-                            .then(|| {
-                                let page = &pages[right_idx];
-                                let rotation = page_rotations
-                                    .get(&PageIndex(right_idx))
-                                    .copied()
-                                    .unwrap_or_default();
-                                Self::rect_in_page(
-                                    right_rect,
-                                    rect_in_page_pt,
-                                    effective_zoom,
-                                    rotation,
-                                    page_state_size(page),
-                                )
-                            })
+                        (page.0 == right_idx).then(|| {
+                            let page = &pages[right_idx];
+                            let rotation = page_rotations
+                                .get(&PageIndex(right_idx))
+                                .copied()
+                                .unwrap_or_default();
+                            Self::rect_in_page(
+                                right_rect,
+                                rect_in_page_pt,
+                                effective_zoom,
+                                rotation,
+                                page_state_size(page),
+                            )
+                        })
                     } else {
                         None
                     };
@@ -1704,9 +1708,7 @@ impl Viewer {
             Sense::click_and_drag(),
         );
 
-        if let Some(pointer_event) =
-            Self::pointer_event(ui, &response, page_rect, effective_zoom)
-        {
+        if let Some(pointer_event) = Self::pointer_event(ui, &response, page_rect, effective_zoom) {
             for plugin in &mut *plugins {
                 if plugin.on_pointer_event(page_index, &pointer_event, plugin_ctx) {
                     break;
@@ -1771,7 +1773,11 @@ impl Viewer {
                     Self::spread_pages(page_count, cover_separate, spread_idx).0,
                 ))
             }
-            ViewMode::Continuous => self.last_visible_pages.first().copied().or(Some(PageIndex(0))),
+            ViewMode::Continuous => self
+                .last_visible_pages
+                .first()
+                .copied()
+                .or(Some(PageIndex(0))),
         }
     }
 
@@ -1785,7 +1791,11 @@ impl Viewer {
         }
     }
 
-    fn spread_pages(page_count: usize, cover_separate: bool, spread_idx: usize) -> (usize, Option<usize>) {
+    fn spread_pages(
+        page_count: usize,
+        cover_separate: bool,
+        spread_idx: usize,
+    ) -> (usize, Option<usize>) {
         if page_count == 0 {
             return (0, None);
         }
@@ -1863,8 +1873,13 @@ impl Viewer {
             );
             let page_size = page_state_size(&pages[page.0]);
             let rotation = page_rotations.get(&page).copied().unwrap_or_default();
-            let target_rect =
-                Self::rect_in_page(page_rect, rect_in_page_pt, effective_zoom, rotation, page_size);
+            let target_rect = Self::rect_in_page(
+                page_rect,
+                rect_in_page_pt,
+                effective_zoom,
+                rotation,
+                page_size,
+            );
             ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
         }
     }

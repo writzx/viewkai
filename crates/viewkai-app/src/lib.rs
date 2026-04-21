@@ -65,9 +65,7 @@ enum SidebarTab {
 enum LoadEvent {
     BytesReceived(PendingLoad),
     LoadSucceeded,
-    LoadFailed {
-        message: String,
-    },
+    LoadFailed { message: String },
     Reset,
 }
 
@@ -119,21 +117,13 @@ const SHORTCUTS: &[(egui::Modifiers, egui::Key, ShortcutAction)] = &[
         egui::Key::O,
         ShortcutAction::OpenFile,
     ),
-    (
-        egui::Modifiers::CTRL,
-        egui::Key::L,
-        ShortcutAction::OpenUrl,
-    ),
+    (egui::Modifiers::CTRL, egui::Key::L, ShortcutAction::OpenUrl),
     (
         egui::Modifiers::CTRL,
         egui::Key::W,
         ShortcutAction::CloseDocument,
     ),
-    (
-        egui::Modifiers::CTRL,
-        egui::Key::Q,
-        ShortcutAction::Exit,
-    ),
+    (egui::Modifiers::CTRL, egui::Key::Q, ShortcutAction::Exit),
 ];
 
 const SHORTCUT_FIND_PREV_ALT: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
@@ -387,8 +377,15 @@ impl App {
     fn document_name_from_url(url: &str) -> Option<String> {
         let trimmed = url.trim();
         let without_fragment = trimmed.split('#').next().unwrap_or(trimmed);
-        let without_query = without_fragment.split('?').next().unwrap_or(without_fragment);
-        let name = without_query.rsplit('/').next().unwrap_or(without_query).trim();
+        let without_query = without_fragment
+            .split('?')
+            .next()
+            .unwrap_or(without_fragment);
+        let name = without_query
+            .rsplit('/')
+            .next()
+            .unwrap_or(without_query)
+            .trim();
         (!name.is_empty()).then(|| name.to_owned())
     }
 
@@ -589,7 +586,10 @@ impl App {
                     }
 
                     let mut show_thumbnails = self.viewer.thumbnails().visible();
-                    if ui.checkbox(&mut show_thumbnails, "Show Thumbnails").clicked() {
+                    if ui
+                        .checkbox(&mut show_thumbnails, "Show Thumbnails")
+                        .clicked()
+                    {
                         self.toggle_thumbnails_visible(show_thumbnails);
                     }
                 });
@@ -671,7 +671,10 @@ impl App {
                     if ui.button("Cancel").clicked() {
                         cancel = true;
                     }
-                    if ui.add_enabled(can_submit, egui::Button::new("Open")).clicked() {
+                    if ui
+                        .add_enabled(can_submit, egui::Button::new("Open"))
+                        .clicked()
+                    {
                         submit = true;
                     }
                 });
@@ -800,9 +803,10 @@ impl eframe::App for App {
                         SidebarTab::Outline => {
                             self.viewer.outline_mut().render_panel(ui, doc.as_deref())
                         }
-                        SidebarTab::Thumbnails => {
-                            self.viewer.thumbnails_mut().render_panel(ui, doc.as_deref())
-                        }
+                        SidebarTab::Thumbnails => self
+                            .viewer
+                            .thumbnails_mut()
+                            .render_panel(ui, doc.as_deref()),
                     }
                 });
         }

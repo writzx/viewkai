@@ -1,8 +1,8 @@
 //! Snapshot regression tests for core viewer states.
 
 use egui_kittest::Harness;
-use viewkai::{RotationDelta, ViewMode, Viewer};
 use viewkai::zoom::ZoomState;
+use viewkai::{RotationDelta, ViewMode, Viewer};
 use viewkai_core::PageIndex;
 
 fn make_snapshot_harness_empty() -> Harness<'static, Viewer> {

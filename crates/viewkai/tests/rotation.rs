@@ -39,7 +39,10 @@ fn rotate_all_applies_to_every_page() {
 
     assert_eq!(viewer.rotation_of(PageIndex(0)), PdfPageRotation::R270);
     assert_eq!(viewer.rotation_of(PageIndex(1)), PdfPageRotation::R270);
-    assert_eq!(viewer.rotation_of(PageIndex(viewer.page_count() - 1)), PdfPageRotation::R270);
+    assert_eq!(
+        viewer.rotation_of(PageIndex(viewer.page_count() - 1)),
+        PdfPageRotation::R270
+    );
 }
 
 #[test]

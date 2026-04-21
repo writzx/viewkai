@@ -2,7 +2,11 @@
 
 use egui::Color32;
 use egui_kittest::{Harness, kittest::Queryable};
-use std::{cell::Cell, collections::HashMap, sync::{Mutex, OnceLock}};
+use std::{
+    cell::Cell,
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+};
 use viewkai::{Viewer, ViewerPlugin};
 use viewkai_core::{PageIndex, PointsRect};
 use viewkai_plugins::PluginContext;
@@ -49,7 +53,10 @@ fn thumbnail_texture_cached_after_first_access() {
     );
 
     harness.run_steps(2);
-    assert!(harness.state().texture_id.is_some(), "thumbnail should be cached");
+    assert!(
+        harness.state().texture_id.is_some(),
+        "thumbnail should be cached"
+    );
 
     harness.run_ok();
     assert!(harness.state().texture_id.is_some());
