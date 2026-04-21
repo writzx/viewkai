@@ -28,6 +28,10 @@ pub fn extract_outline(doc: &Document) -> Result<Outline> {
     Ok(outline)
 }
 
+// justify: `doc` is threaded through the recursion so every frame can call
+// `map_destination` against the same document handle; removing it would force
+// callers to re-plumb the document on each tail call and does not simplify the
+// API.
 #[allow(clippy::only_used_in_recursion)]
 fn push_bookmark(
     doc: &Document,
@@ -61,6 +65,10 @@ fn push_bookmark(
 }
 
 fn map_destination(dest: &pdfium_render::prelude::PdfDestination<'_>) -> Result<Destination> {
+    // justify: `pdfium-render` returns the bookmark's destination page as a
+    // signed C integer; the value is always non-negative because pdfium yields
+    // a `PdfiumError` on invalid pages before we reach this cast. `PageIndex`
+    // wraps `usize`, so the cast is bounded by the document's page count.
     #[allow(clippy::cast_sign_loss)]
     let page = PageIndex(dest.page_index().map_err(|err| EngineError::Pdfium {
         message: err.to_string(),

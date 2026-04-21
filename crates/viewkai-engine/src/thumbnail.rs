@@ -15,6 +15,12 @@ use viewkai_core::{PageIndex, PdfPageRotation, RawImage};
 /// # Errors
 ///
 /// Returns an error if the page index is out of bounds or pdfium fails.
+// justify: `pdfium-render` exposes page indices, pixel widths, and bitmap
+// dimensions as signed C integer types (`PdfPageIndex` / `Pixels` / `c_int`).
+// The conversions between `PageIndex(usize)`, the caller-provided `u32`
+// `width_px`, and pdfium's `bitmap.width()` / `bitmap.height()` are bounded by
+// the same pdfium-sized page geometry, so wraparound and sign loss cannot
+// occur for any document pdfium has successfully opened.
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
