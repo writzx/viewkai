@@ -1,7 +1,7 @@
 //! Native PDF viewer application built on `viewkai`.
 
 use eframe::egui;
-use viewkai::{ViewMode, Viewer, zoom::ZoomState};
+use viewkai::{RotationDelta, ViewMode, Viewer, zoom::ZoomState};
 use viewkai_core::PageIndex;
 use viewkai_engine::{Document, init};
 
@@ -421,6 +421,23 @@ impl eframe::App for App {
                         ui.close();
                         self.open_file();
                     }
+                });
+
+                ui.menu_button("View", |ui| {
+                    ui.menu_button("Rotation", |ui| {
+                        if ui.button("Rotate Left").clicked() {
+                            self.viewer.rotate_all(RotationDelta::CounterClockwise);
+                            ui.close();
+                        }
+                        if ui.button("Rotate Right").clicked() {
+                            self.viewer.rotate_all(RotationDelta::Clockwise);
+                            ui.close();
+                        }
+                        if ui.button("Reset Rotation").clicked() {
+                            self.viewer.reset_rotations();
+                            ui.close();
+                        }
+                    });
                 });
 
                 ui.separator();

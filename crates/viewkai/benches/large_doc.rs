@@ -26,7 +26,8 @@ fn bench_rasterize_page_at_150dpi(c: &mut Criterion) {
     c.bench_function("rasterize_page_at_150dpi", |b| {
         b.iter(|| {
             let raw =
-                viewkai_engine::render_page(&doc, PageIndex(0), 150).expect("should render page");
+        viewkai_engine::render_page(&doc, PageIndex(0), 150, viewkai_core::PdfPageRotation::None)
+            .expect("should render page");
             criterion::black_box(raw.pixels.len())
         });
     });

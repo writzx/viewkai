@@ -1,6 +1,6 @@
 //! Thumbnail plugin tests.
 
-use std::{cell::Cell, sync::OnceLock};
+use std::{cell::Cell, collections::HashMap, sync::OnceLock};
 
 use egui::{Color32, Key, TextureHandle};
 use egui_kittest::{Harness, kittest::Queryable};
@@ -44,6 +44,7 @@ impl CacheState {
 }
 
 fn run_cache_frame(ui: &mut egui::Ui, state: &mut CacheState) {
+    let rotations = HashMap::new();
     let mut ctx = PluginContext::new(
         Some(&state.doc),
         1.0,
@@ -51,13 +52,19 @@ fn run_cache_frame(ui: &mut egui::Ui, state: &mut CacheState) {
         ui.ctx(),
         Color32::WHITE,
         true,
+        &rotations,
         None,
         &state.pending_scroll,
     );
     state.plugin.on_frame_update(&mut ctx);
     state.last_texture = state
         .plugin
-        .thumbnail_texture(ui, &state.doc, state.requested_page);
+        .thumbnail_texture(
+            ui,
+            &state.doc,
+            state.requested_page,
+            viewkai_core::PdfPageRotation::None,
+        );
 }
 
 #[test]

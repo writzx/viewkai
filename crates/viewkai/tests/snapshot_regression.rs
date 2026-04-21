@@ -1,8 +1,9 @@
 //! Snapshot regression tests for core viewer states.
 
 use egui_kittest::Harness;
-use viewkai::{ViewMode, Viewer};
+use viewkai::{RotationDelta, ViewMode, Viewer};
 use viewkai::zoom::ZoomState;
+use viewkai_core::PageIndex;
 
 fn make_snapshot_harness_empty() -> Harness<'static, Viewer> {
     let viewer = Viewer::new();
@@ -98,4 +99,36 @@ fn snapshot_spread_mode_cover_separate() {
     h.run_ok();
     h.run_ok();
     h.snapshot("spread_mode_cover_separate");
+}
+
+#[test]
+fn snapshot_rotation_90_hello() {
+    let mut h = make_snapshot_harness_loaded(None);
+    h.state_mut()
+        .rotate_page(PageIndex(0), RotationDelta::Clockwise);
+    h.run_ok();
+    h.run_ok();
+    h.snapshot("rotation_90_hello");
+}
+
+#[test]
+fn snapshot_rotation_180_hello() {
+    let mut h = make_snapshot_harness_loaded(None);
+    h.state_mut()
+        .rotate_page(PageIndex(0), RotationDelta::Clockwise);
+    h.state_mut()
+        .rotate_page(PageIndex(0), RotationDelta::Clockwise);
+    h.run_ok();
+    h.run_ok();
+    h.snapshot("rotation_180_hello");
+}
+
+#[test]
+fn snapshot_rotation_270_hello() {
+    let mut h = make_snapshot_harness_loaded(None);
+    h.state_mut()
+        .rotate_page(PageIndex(0), RotationDelta::CounterClockwise);
+    h.run_ok();
+    h.run_ok();
+    h.snapshot("rotation_270_hello");
 }

@@ -4,9 +4,10 @@
 //! plugin hooks without standing up a full `Viewer`.
 
 use std::cell::Cell;
+use std::collections::HashMap;
 
 use egui::{Color32, Context};
-use viewkai_core::{PageIndex, PointsRect};
+use viewkai_core::{PageIndex, PdfPageRotation, PointsRect};
 use viewkai_engine::Document;
 
 use crate::plugin::PluginContext;
@@ -21,6 +22,7 @@ pub fn build_context<'a>(
     egui_ctx: &'a Context,
     selection_color: Color32,
     library_shortcuts_enabled: bool,
+    rotations: &'a HashMap<PageIndex, PdfPageRotation>,
     pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
 ) -> PluginContext<'a> {
     PluginContext {
@@ -30,6 +32,7 @@ pub fn build_context<'a>(
         egui_ctx,
         selection_color,
         library_shortcuts_enabled,
+        rotations,
         page_rect_screen: None,
         repaint_requested: false,
         pending_scroll,

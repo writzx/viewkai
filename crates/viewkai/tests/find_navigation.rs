@@ -1,6 +1,7 @@
 //! Find navigation regression coverage.
 
 use std::{cell::Cell, sync::Mutex};
+use std::collections::HashMap;
 
 use egui_kittest::Harness;
 use viewkai::{PluginContext, Viewer};
@@ -14,6 +15,7 @@ fn query_hello(viewer: &mut Viewer, term: &str) {
     let doc = Document::from_bytes(bytes).expect("reload hello.pdf for search context");
     let egui_ctx = egui::Context::default();
     let pending_scroll = Cell::new(None::<(PageIndex, PointsRect)>);
+    let rotations = HashMap::new();
     let ctx = PluginContext::new(
         Some(&doc),
         1.0,
@@ -21,6 +23,7 @@ fn query_hello(viewer: &mut Viewer, term: &str) {
         &egui_ctx,
         egui::Color32::from_rgba_unmultiplied(70, 120, 210, 96),
         true,
+        &rotations,
         None,
         &pending_scroll,
     );

@@ -1,9 +1,9 @@
 //! Core plugin trait and context types.
 
-use std::{any::Any, cell::Cell};
+use std::{any::Any, cell::Cell, collections::HashMap};
 
 use egui::{Color32, Context, Ui};
-use viewkai_core::{PageIndex, PointsPos, PointsRect};
+use viewkai_core::{PageIndex, PdfPageRotation, PointsPos, PointsRect};
 use viewkai_engine::Document;
 
 /// Context passed to every plugin hook each frame.
@@ -24,6 +24,8 @@ pub struct PluginContext<'a> {
     pub selection_color: Color32,
     /// Whether the library's built-in keyboard shortcuts are enabled.
     pub library_shortcuts_enabled: bool,
+    /// Per-page display-time rotations owned by the viewer.
+    pub rotations: &'a HashMap<PageIndex, PdfPageRotation>,
     /// Screen-space rectangle of the current page. `Some` only during
     /// `draw_page_overlay` dispatch; `None` during all other hooks.
     pub page_rect_screen: Option<egui::Rect>,
@@ -49,6 +51,7 @@ impl PluginContext<'_> {
         egui_ctx: &'a Context,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
+        rotations: &'a HashMap<PageIndex, PdfPageRotation>,
         page_rect_screen: Option<egui::Rect>,
         pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
     ) -> PluginContext<'a> {
@@ -59,6 +62,7 @@ impl PluginContext<'_> {
             egui_ctx,
             selection_color,
             library_shortcuts_enabled,
+            rotations,
             page_rect_screen,
             repaint_requested: false,
             pending_scroll,
@@ -85,6 +89,12 @@ impl PluginContext<'_> {
     /// the plugin rendering order determines priority.
     pub fn request_scroll_to(&self, page: PageIndex, rect_in_page_pt: PointsRect) {
         self.pending_scroll.set(Some((page, rect_in_page_pt)));
+    }
+
+    /// Return the active display-time rotation for `page`.
+    #[must_use]
+    pub fn rotation_of(&self, page: PageIndex) -> PdfPageRotation {
+        self.rotations.get(&page).copied().unwrap_or_default()
     }
 }
 

@@ -2,7 +2,7 @@
 
 use crate::{Document, PDFIUM_OP_LOCK, error::{EngineError, Result}};
 use pdfium_render::prelude::*;
-use viewkai_core::{PageIndex, RawImage};
+use viewkai_core::{PageIndex, PdfPageRotation, RawImage};
 
 /// Render a page thumbnail with the requested pixel width.
 ///
@@ -13,7 +13,12 @@ use viewkai_core::{PageIndex, RawImage};
 ///
 /// Returns an error if the page index is out of bounds or pdfium fails.
 #[allow(clippy::cast_possible_truncation)]
-pub fn render_thumbnail(doc: &Document, page: PageIndex, width_px: u32) -> Result<RawImage> {
+pub fn render_thumbnail(
+    doc: &Document,
+    page: PageIndex,
+    width_px: u32,
+    rotation: PdfPageRotation,
+) -> Result<RawImage> {
     let _pdfium_op_guard = PDFIUM_OP_LOCK
         .lock()
         .map_err(|_| EngineError::InitLockPoisoned)?;
@@ -32,9 +37,17 @@ pub fn render_thumbnail(doc: &Document, page: PageIndex, width_px: u32) -> Resul
             },
         })?;
 
-    let config = PdfRenderConfig::new()
+    let mut config = PdfRenderConfig::new()
         .thumbnail(width_px as Pixels)
         .set_target_width(width_px as Pixels);
+    if let Some(rotation) = match rotation {
+        PdfPageRotation::None => None,
+        PdfPageRotation::R90 => Some(PdfPageRenderRotation::Degrees90),
+        PdfPageRotation::R180 => Some(PdfPageRenderRotation::Degrees180),
+        PdfPageRotation::R270 => Some(PdfPageRenderRotation::Degrees270),
+    } {
+        config = config.rotate(rotation, true);
+    }
     let bitmap = page
         .render_with_config(&config)
         .map_err(|e| EngineError::Pdfium {

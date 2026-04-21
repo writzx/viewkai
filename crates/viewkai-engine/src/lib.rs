@@ -34,7 +34,7 @@ use std::{
     pin::Pin,
     sync::{Arc as StdArc, Mutex, OnceLock},
 };
-use viewkai_core::{Outline, PageIndex, PageSize, PageText, RawImage};
+use viewkai_core::{Outline, PageIndex, PageSize, PageText, PdfPageRotation, RawImage};
 
 pub use outline::extract_outline;
 pub use search::search_page;
@@ -331,7 +331,12 @@ impl Document {
     clippy::cast_precision_loss,
     clippy::cast_sign_loss
 )]
-pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage> {
+pub fn render_page(
+    doc: &Document,
+    idx: PageIndex,
+    dpi: u32,
+    rotation: PdfPageRotation,
+) -> Result<RawImage> {
     let _pdfium_op_guard = PDFIUM_OP_LOCK
         .lock()
         .map_err(|_| EngineError::InitLockPoisoned)?;
@@ -351,26 +356,45 @@ pub fn render_page(doc: &Document, idx: PageIndex, dpi: u32) -> Result<RawImage>
         })?;
 
     let scale = dpi as f32 / 72.0;
-    let width = (page.width().value * scale).round() as Pixels;
-    let height = (page.height().value * scale).round() as Pixels;
+    let unrotated_width = (page.width().value * scale).round() as Pixels;
+    let unrotated_height = (page.height().value * scale).round() as Pixels;
+    let (width, height) = match rotation {
+        PdfPageRotation::R90 | PdfPageRotation::R270 => (unrotated_height, unrotated_width),
+        PdfPageRotation::None | PdfPageRotation::R180 => (unrotated_width, unrotated_height),
+    };
 
     let mut config = Document::render_config()
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    *config = PdfRenderConfig::new()
+    let mut render_config = PdfRenderConfig::new()
         .set_target_width(width)
         .set_target_height(height);
+    if let Some(rotation) = pdfium_rotation(rotation) {
+        render_config = render_config.rotate(rotation, true);
+    }
+    *config = render_config;
     let bitmap = page
         .render_with_config(&config)
         .map_err(|e| EngineError::Pdfium {
             message: e.to_string(),
         })?;
 
+    let actual_width = bitmap.width() as u32;
+    let actual_height = bitmap.height() as u32;
     let pixels = bitmap.as_rgba_bytes();
 
     Ok(RawImage {
-        width: width as u32,
-        height: height as u32,
+        width: actual_width,
+        height: actual_height,
         pixels,
     })
+}
+
+fn pdfium_rotation(rotation: PdfPageRotation) -> Option<PdfPageRenderRotation> {
+    match rotation {
+        PdfPageRotation::None => None,
+        PdfPageRotation::R90 => Some(PdfPageRenderRotation::Degrees90),
+        PdfPageRotation::R180 => Some(PdfPageRenderRotation::Degrees180),
+        PdfPageRotation::R270 => Some(PdfPageRenderRotation::Degrees270),
+    }
 }

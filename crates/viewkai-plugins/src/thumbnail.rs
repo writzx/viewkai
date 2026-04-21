@@ -3,13 +3,19 @@
 use std::collections::HashMap;
 
 use egui::{Color32, TextureHandle, TextureOptions, Ui, Vec2};
-use viewkai_core::{PageIndex, PointsRect};
+use viewkai_core::{PageIndex, PdfPageRotation, PointsRect};
 use viewkai_engine::Document;
 
 use crate::{PluginContext, ViewerPlugin, sealed};
 
 const DEFAULT_THUMBNAIL_BUDGET: usize = 64 * 1024 * 1024;
 const THUMBNAILS_PER_FRAME: usize = 3;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct ThumbnailCacheKey {
+    page: PageIndex,
+    rotation: PdfPageRotation,
+}
 
 struct CacheEntry {
     texture: TextureHandle,
@@ -18,7 +24,7 @@ struct CacheEntry {
 }
 
 struct ThumbnailCache {
-    entries: HashMap<PageIndex, CacheEntry>,
+    entries: HashMap<ThumbnailCacheKey, CacheEntry>,
     total_bytes: usize,
     budget_bytes: usize,
     frame_counter: u64,
@@ -34,14 +40,14 @@ impl ThumbnailCache {
         }
     }
 
-    fn get(&mut self, page: PageIndex) -> Option<TextureHandle> {
-        let entry = self.entries.get_mut(&page)?;
+    fn get(&mut self, key: ThumbnailCacheKey) -> Option<TextureHandle> {
+        let entry = self.entries.get_mut(&key)?;
         entry.last_accessed_frame = self.frame_counter;
         Some(entry.texture.clone())
     }
 
-    fn insert(&mut self, page: PageIndex, texture: TextureHandle, byte_size: usize) {
-        if let Some(old) = self.entries.remove(&page) {
+    fn insert(&mut self, key: ThumbnailCacheKey, texture: TextureHandle, byte_size: usize) {
+        if let Some(old) = self.entries.remove(&key) {
             self.total_bytes -= old.byte_size;
         }
 
@@ -50,7 +56,7 @@ impl ThumbnailCache {
         }
 
         self.entries.insert(
-            page,
+            key,
             CacheEntry {
                 texture,
                 byte_size,
@@ -77,18 +83,18 @@ impl ThumbnailCache {
 
     fn evict_to_budget(&mut self) {
         while self.total_bytes > self.budget_bytes {
-            let Some(lru_page) = self
+            let Some(lru_key) = self
                 .entries
                 .iter()
                 .min_by_key(|(_, entry)| entry.last_accessed_frame)
-                .map(|(page, _)| *page)
+                .map(|(key, _)| *key)
             else {
                 break;
             };
 
             let removed = self
                 .entries
-                .remove(&lru_page)
+                .remove(&lru_key)
                 .expect("lru page came from cache entries");
             self.total_bytes -= removed.byte_size;
         }
@@ -126,10 +132,12 @@ impl ThumbnailPlugin {
         ui: &mut Ui,
         document: &Document,
         page: PageIndex,
+        rotation: PdfPageRotation,
     ) -> Option<TextureHandle> {
         self.sync_document(document);
+        let key = ThumbnailCacheKey { page, rotation };
 
-        if let Some(handle) = self.cache.get(page) {
+        if let Some(handle) = self.cache.get(key) {
             return Some(handle);
         }
 
@@ -153,7 +161,7 @@ impl ThumbnailPlugin {
         egui::ScrollArea::vertical().show(ui, |ui| {
             for page_idx in 0..doc.page_count() {
                 let page = PageIndex(page_idx);
-                let texture = self.thumbnail_texture(ui, doc, page);
+                let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
                 let label = format!("Page {}", page_idx + 1);
                 let mut clicked = false;
 
@@ -295,22 +303,35 @@ impl ViewerPlugin for ThumbnailPlugin {
             .collect::<Vec<_>>();
 
         for page in pending {
-            if self.cache.get(page).is_some() {
+            let rotation = ctx.rotation_of(page);
+            let key = ThumbnailCacheKey { page, rotation };
+
+            if self.cache.get(key).is_some() {
                 continue;
             }
 
-            if let Ok(raw) = viewkai_engine::render_thumbnail(document, page, self.thumbnail_width) {
+            if let Ok(raw) = viewkai_engine::render_thumbnail(
+                document,
+                page,
+                self.thumbnail_width,
+                rotation,
+            ) {
                 let byte_size = raw.pixels.len();
                 let image = egui::ColorImage::from_rgba_unmultiplied(
                     [raw.width as usize, raw.height as usize],
                     &raw.pixels,
                 );
                 let handle = ctx.egui_ctx.load_texture(
-                    format!("viewkai/thumbnail/{:p}/{}", document, page.0),
+                    format!(
+                        "viewkai/thumbnail/{:p}/{}/{}",
+                        document,
+                        page.0,
+                        rotation.as_degrees()
+                    ),
                     image,
                     TextureOptions::LINEAR,
                 );
-                self.cache.insert(page, handle, byte_size);
+                self.cache.insert(key, handle, byte_size);
             }
         }
 

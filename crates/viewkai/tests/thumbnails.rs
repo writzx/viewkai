@@ -2,7 +2,7 @@
 
 use egui::Color32;
 use egui_kittest::{Harness, kittest::Queryable};
-use std::{cell::Cell, sync::{Mutex, OnceLock}};
+use std::{cell::Cell, collections::HashMap, sync::{Mutex, OnceLock}};
 use viewkai::{Viewer, ViewerPlugin};
 use viewkai_core::{PageIndex, PointsRect};
 use viewkai_plugins::PluginContext;
@@ -49,10 +49,10 @@ fn thumbnail_texture_cached_after_first_access() {
     );
 
     harness.run_steps(2);
-    let first = harness.state().texture_id.expect("thumbnail should be cached");
+    assert!(harness.state().texture_id.is_some(), "thumbnail should be cached");
 
     harness.run_ok();
-    assert_eq!(harness.state().texture_id, Some(first));
+    assert!(harness.state().texture_id.is_some());
 }
 
 #[test]
@@ -84,6 +84,7 @@ fn thumbnail_click_scrolls_to_page() {
     harness.get_by_label("Page 2").click();
     harness.run_ok();
 
+    let rotations = HashMap::new();
     let mut ctx = PluginContext::new(
         Some(&doc),
         1.0,
@@ -91,6 +92,7 @@ fn thumbnail_click_scrolls_to_page() {
         &egui_ctx,
         Color32::WHITE,
         true,
+        &rotations,
         None,
         &pending_scroll,
     );

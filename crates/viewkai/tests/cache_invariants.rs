@@ -4,7 +4,7 @@ use egui::{ColorImage, Context, TextureOptions};
 use egui_kittest::Harness;
 use std::sync::{Mutex, OnceLock};
 use viewkai::cache::{CacheKey, TextureCache};
-use viewkai_core::PageIndex;
+use viewkai_core::{PageIndex, PdfPageRotation};
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -15,6 +15,7 @@ fn make_key(page: usize, bucket: u8) -> CacheKey {
     CacheKey {
         page_idx: PageIndex(page),
         zoom_bucket: bucket,
+        rotation: PdfPageRotation::None,
     }
 }
 

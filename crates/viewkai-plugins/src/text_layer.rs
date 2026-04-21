@@ -1,7 +1,11 @@
 //! Text-layer plugin: per-character bbox extraction, word grouping, debug overlay.
 
 use egui::{Color32, Stroke, Ui};
-use viewkai_core::{CharIndex, PageIndex, PointsPos, PointsRect, SelectionRange};
+
+use viewkai_core::{
+    CharIndex, PageIndex, PointsPos, PointsRect, SelectionRange, forward_rotate_rect,
+    inverse_rotate_point,
+};
 
 use crate::{PluginContext, ViewerPlugin, sealed::Sealed};
 
@@ -166,12 +170,17 @@ pub(crate) fn apply_pointer_event(
     let Some(doc) = ctx.document else {
         return false;
     };
+    let rotation = ctx.rotation_of(page);
+    let Ok(page_size) = doc.page_size(page) else {
+        return false;
+    };
     let Ok(text) = doc.page_text(page) else {
         return false;
     };
+    let hit_pos = inverse_rotate_point(event.pos_in_page_pt, rotation, page_size);
 
     if event.click_count >= 3 {
-        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt)
+        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, hit_pos)
             && let Some(line) = text.lines.iter().find(|line| {
                 line.page == page
                     && char_idx.char >= line.start_char
@@ -195,7 +204,7 @@ pub(crate) fn apply_pointer_event(
     }
 
     if event.click_count == 2 {
-        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt)
+        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, hit_pos)
             && let Some(word) = text.words.iter().find(|word| {
                 word.page == page
                     && char_idx.char >= word.start_char
@@ -219,7 +228,7 @@ pub(crate) fn apply_pointer_event(
     }
 
     if event.modifiers.shift && event.click_count == 1 && !event.primary_down {
-        if let Some(target) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt) {
+        if let Some(target) = char_at_page_pos_with_text(&text, page, hit_pos) {
             let existing_start = selection.as_ref().map(|current| current.start);
             if let Some(start) = existing_start {
                 *selection = Some(SelectionRange::new(start, target));
@@ -233,14 +242,14 @@ pub(crate) fn apply_pointer_event(
 
     if event.primary_down
         && let Some(current_anchor) = *anchor
-        && let Some(current) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt)
+        && let Some(current) = char_at_page_pos_with_text(&text, page, hit_pos)
     {
         *selection = Some(SelectionRange::new(current_anchor, current));
         return true;
     }
 
     if event.primary_down && event.click_count == 1 {
-        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, event.pos_in_page_pt) {
+        if let Some(char_idx) = char_at_page_pos_with_text(&text, page, hit_pos) {
             if event.modifiers.command {
                 if let Some(existing) = selection.as_ref() {
                     *selection = Some(extend_selection_with_click(existing, char_idx));
@@ -333,6 +342,10 @@ impl ViewerPlugin for TextLayerPlugin {
         let Ok(text) = doc.page_text(page) else {
             return;
         };
+        let Ok(page_size) = doc.page_size(page) else {
+            return;
+        };
+        let rotation = ctx.rotation_of(page);
 
         let page_origin = ctx
             .page_rect_screen
@@ -342,7 +355,11 @@ impl ViewerPlugin for TextLayerPlugin {
 
         if self.debug {
             for word in &text.words {
-                let screen_rect = page_rect_to_screen(word.bbox, page_origin, zoom);
+                let screen_rect = page_rect_to_screen(
+                    forward_rotate_rect(word.bbox, rotation, page_size),
+                    page_origin,
+                    zoom,
+                );
                 ui.painter().rect_stroke(
                     screen_rect,
                     0.0,
@@ -399,7 +416,11 @@ impl ViewerPlugin for TextLayerPlugin {
                     union_rect.height = bottom - union_rect.y;
                 }
 
-                let screen_rect = page_rect_to_screen(union_rect, page_origin, zoom);
+                let screen_rect = page_rect_to_screen(
+                    forward_rotate_rect(union_rect, rotation, page_size),
+                    page_origin,
+                    zoom,
+                );
                 ui.painter()
                     .rect_filled(screen_rect, 0.0, ctx.selection_color);
             }
@@ -453,10 +474,10 @@ impl ViewerPlugin for TextLayerPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::Cell;
+    use std::{cell::Cell, collections::HashMap};
 
     use egui::Context;
-    use viewkai_core::{GlyphBox, PageText, WordSpan};
+    use viewkai_core::{GlyphBox, PageText, PointsPos, PointsRect, WordSpan};
     use viewkai_engine::Document;
 
     fn make_glyph(ch: char, x: f32, y: f32, w: f32, h: f32) -> GlyphBox {
@@ -490,6 +511,7 @@ mod tests {
         egui_ctx: &'a Context,
     ) -> PluginContext<'a> {
         let pending_scroll = Box::leak(Box::new(Cell::new(None)));
+        let rotations = Box::leak(Box::new(HashMap::new()));
         PluginContext {
             document,
             zoom: 1.0,
@@ -497,6 +519,7 @@ mod tests {
             egui_ctx,
             selection_color: Color32::LIGHT_BLUE,
             library_shortcuts_enabled: true,
+            rotations,
             page_rect_screen: None,
             repaint_requested: false,
             pending_scroll,

@@ -3,7 +3,7 @@
 use egui::Key;
 use egui_kittest::Harness;
 use std::sync::{Mutex, OnceLock};
-use viewkai::{ViewMode, Viewer};
+use viewkai::{ViewMode, Viewer, zoom::ZoomState};
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -118,5 +118,36 @@ fn spread_mode_scroll_to_page_lands_on_spread() {
     assert_eq!(
         h.state().visible_pages(),
         &[viewkai_core::PageIndex(1), viewkai_core::PageIndex(2)]
+    );
+}
+
+#[test]
+fn single_mode_zoomed_page_stays_reachable() {
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut h = multipage_harness();
+    h.state_mut().set_zoom(ZoomState::Custom(2.0));
+    h.state_mut().set_view_mode(ViewMode::Single);
+    h.run_ok();
+
+    assert_eq!(h.state().visible_pages(), &[viewkai_core::PageIndex(0)]);
+}
+
+#[test]
+fn spread_mode_zoomed_pages_stay_reachable() {
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut h = multipage_harness();
+    h.state_mut().set_zoom(ZoomState::Custom(1.8));
+    h.state_mut().set_view_mode(ViewMode::Spread {
+        cover_separate: false,
+    });
+    h.run_ok();
+
+    assert_eq!(
+        h.state().visible_pages(),
+        &[viewkai_core::PageIndex(0), viewkai_core::PageIndex(1)]
     );
 }

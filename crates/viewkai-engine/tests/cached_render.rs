@@ -5,6 +5,7 @@
 //! for out-of-bounds page indices.
 
 use viewkai_core::PageIndex;
+use viewkai_core::PdfPageRotation;
 use viewkai_engine::{Document, error::EngineError};
 
 /// Fixture: the hello.pdf test PDF.
@@ -23,8 +24,8 @@ fn init_engine() {
 fn render_same_page_twice_succeeds() {
     init_engine();
     let doc = Document::from_bytes(HELLO_PDF.to_vec()).expect("load hello.pdf");
-    let first = viewkai_engine::render_page(&doc, PageIndex(0), 72);
-    let second = viewkai_engine::render_page(&doc, PageIndex(0), 72);
+    let first = viewkai_engine::render_page(&doc, PageIndex(0), 72, PdfPageRotation::None);
+    let second = viewkai_engine::render_page(&doc, PageIndex(0), 72, PdfPageRotation::None);
     assert!(first.is_ok(), "first render failed: {first:?}");
     assert!(second.is_ok(), "second render failed: {second:?}");
 }
@@ -35,7 +36,8 @@ fn render_page_out_of_bounds_returns_typed_error() {
     init_engine();
     let doc = Document::from_bytes(HELLO_PDF.to_vec()).expect("load hello.pdf");
     let page_count = doc.page_count();
-    let result = viewkai_engine::render_page(&doc, PageIndex(page_count), 72);
+    let result =
+        viewkai_engine::render_page(&doc, PageIndex(page_count), 72, PdfPageRotation::None);
     match result {
         Err(EngineError::PageIndexOutOfBounds { index, count }) => {
             assert_eq!(

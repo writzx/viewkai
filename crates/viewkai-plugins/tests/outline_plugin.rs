@@ -1,6 +1,6 @@
 //! Outline plugin tests.
 
-use std::cell::Cell;
+use std::{cell::Cell, collections::HashMap};
 
 use egui_kittest::{Harness, kittest::Queryable};
 use viewkai_plugins::{OutlinePlugin, PluginContext, ViewerPlugin};
@@ -45,6 +45,7 @@ fn show_toolbar_toggles_outline_panel() {
 
     let mut harness = Harness::builder().build_ui_state(
         |ui, state: &mut State| {
+            let rotations = HashMap::new();
             let mut ctx = PluginContext::new(
                 None,
                 1.0,
@@ -52,6 +53,7 @@ fn show_toolbar_toggles_outline_panel() {
                 &state.egui_ctx,
                 egui::Color32::WHITE,
                 true,
+                &rotations,
                 None,
                 &state.pending_scroll,
             );
@@ -85,6 +87,7 @@ fn goto_destination_emits_expected_target() {
         }),
     });
 
+    let rotations = HashMap::new();
     let mut ctx = PluginContext::new(
         None,
         1.0,
@@ -92,6 +95,7 @@ fn goto_destination_emits_expected_target() {
         &egui_ctx,
         egui::Color32::WHITE,
         true,
+        &rotations,
         None,
         &pending_scroll,
     );

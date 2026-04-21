@@ -7,6 +7,8 @@ pub const NAME: &str = "viewkai-core";
 pub mod error;
 /// Document outline (table of contents) types.
 pub mod outline;
+/// Shared display-time page rotation types.
+pub mod rotation;
 /// Shared search data types.
 pub mod search;
 /// Shared text extraction data types.
@@ -18,6 +20,10 @@ pub mod view_mode;
 
 pub use error::*;
 pub use outline::{Destination, DestPosition, Outline, OutlineNode, OutlineNodeId};
+pub use rotation::{
+    PdfPageRotation, RotationDelta, forward_rotate_point, forward_rotate_rect,
+    inverse_rotate_point, rotated_page_size,
+};
 pub use search::{SearchMatch, SearchQuery, SearchState};
 pub use text::{CharIndex, CharSpan, GlyphBox, LineSpan, PageText, SelectionRange, WordSpan};
 pub use types::*;

@@ -1,6 +1,7 @@
 //! Selection blur integration coverage.
 
 use std::sync::Mutex;
+use std::collections::HashMap;
 
 use egui_kittest::Harness;
 use viewkai::{PluginContext, PointerEvent, Viewer, ViewerPlugin};
@@ -25,6 +26,7 @@ fn clicking_inside_page_outside_text_clears_selection() {
 
     let egui_ctx = egui::Context::default();
     let pending_scroll = std::cell::Cell::new(None::<(PageIndex, PointsRect)>);
+    let rotations = HashMap::new();
     let mut ctx = PluginContext::new(
         Some(&doc),
         1.0,
@@ -32,6 +34,7 @@ fn clicking_inside_page_outside_text_clears_selection() {
         &egui_ctx,
         viewer.selection_color(),
         viewer.library_shortcuts_enabled(),
+        &rotations,
         None,
         &pending_scroll,
     );

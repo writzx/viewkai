@@ -1,7 +1,7 @@
 //! Search plugin: full-text search with Ctrl+F overlay and match highlighting.
 
 use egui::{Area, Color32, Context, Id, Key, KeyboardShortcut, Modifiers, Order, Ui};
-use viewkai_core::{PageIndex, SearchMatch, SearchQuery, SearchState};
+use viewkai_core::{PageIndex, SearchMatch, SearchQuery, SearchState, forward_rotate_rect};
 
 use crate::{PluginContext, ViewerPlugin, sealed::Sealed};
 
@@ -241,6 +241,13 @@ impl ViewerPlugin for SearchPlugin {
             .expect("page_rect_screen must be Some during draw_page_overlay; ensure paint_pages threads it via PluginContext")
             .min;
         let zoom = ctx.zoom;
+        let Some(doc) = ctx.document else {
+            return;
+        };
+        let Ok(page_size) = doc.page_size(page) else {
+            return;
+        };
+        let rotation = ctx.rotation_of(page);
 
         for (index, search_match) in state.matches.iter().enumerate() {
             if search_match.page != page {
@@ -254,6 +261,7 @@ impl ViewerPlugin for SearchPlugin {
             };
 
             for rect in &search_match.rects {
+                let rect = forward_rotate_rect(*rect, rotation, page_size);
                 let screen_rect = egui::Rect::from_min_size(
                     egui::pos2(page_origin.x + rect.x * zoom, page_origin.y + rect.y * zoom),
                     egui::vec2(rect.width * zoom, rect.height * zoom),

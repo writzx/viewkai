@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use egui::TextureHandle;
-use viewkai_core::PageIndex;
+use viewkai_core::{PageIndex, PdfPageRotation};
 
 /// Cache key: page index + zoom bucket (DPI tier).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -12,6 +12,8 @@ pub struct CacheKey {
     pub page_idx: PageIndex,
     /// Quantized zoom bucket used for the cached render.
     pub zoom_bucket: u8,
+    /// Display-time page rotation used for the cached render.
+    pub rotation: PdfPageRotation,
 }
 
 /// A single cached texture entry.
@@ -156,6 +158,7 @@ mod tests {
         CacheKey {
             page_idx: PageIndex(page),
             zoom_bucket: bucket,
+            rotation: PdfPageRotation::None,
         }
     }
 
