@@ -233,7 +233,7 @@ impl ThumbnailPlugin {
     fn preview_height_for(&self, document: &Document, page: PageIndex) -> f32 {
         document
             .page_size(page)
-            .map(|size| {
+            .map_or(self.thumbnail_width as f32 * 1.4, |size| {
                 let aspect = if size.width_pt > 0.0 {
                     size.height_pt / size.width_pt
                 } else {
@@ -241,7 +241,6 @@ impl ThumbnailPlugin {
                 };
                 (self.thumbnail_width as f32 * aspect).max(1.0)
             })
-            .unwrap_or(self.thumbnail_width as f32 * 1.4)
     }
 
     fn reset_document_state(&mut self) {
