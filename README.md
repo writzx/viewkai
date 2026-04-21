@@ -30,6 +30,10 @@ viewkai is a Rust PDF viewer library targeting `wasm32-unknown-unknown` and nati
 
 `viewkai` owns a fixed-order built-in plugin registry exposed through the sibling `viewkai-plugins` crate. In `v0.1.0`, the sealed `TextLayerPlugin` and `SearchPlugin` now ship as built-in functionality for text extraction, text selection, clipboard copy, and full-text search across the viewer's three contribution surfaces: per-page overlays, toolbar UI, and viewer-level overlays.
 
+## Docs
+
+- [Keyboard shortcuts](docs/shortcuts.md)
+
 ## Screenshots
 
 ### Text Selection (v0.1.0)
