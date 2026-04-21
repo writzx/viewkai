@@ -10,7 +10,7 @@
     </style>
     
     
-  <link rel="modulepreload" href="./viewkai-web-4732daa5548036ee.js" crossorigin="anonymous" integrity="sha384-GsypAYO9Irv8ulbD/07pHnVHVbAwbEU9lMnbo63WlkDqmkpPM5I9uH7EVlsAExqj"><link rel="preload" href="./viewkai-web-4732daa5548036ee_bg.wasm" crossorigin="anonymous" integrity="sha384-deKbqo4GBRtFIyjbWDw8XuQb/dXC05q+BH/loD7MMXIaSG25wYjiHR4bzh4S9RKu" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="./viewkai-web-ffba0136e3ee42f6.js" crossorigin="anonymous" integrity="sha384-GsypAYO9Irv8ulbD/07pHnVHVbAwbEU9lMnbo63WlkDqmkpPM5I9uH7EVlsAExqj"><link rel="preload" href="./viewkai-web-ffba0136e3ee42f6_bg.wasm" crossorigin="anonymous" integrity="sha384-o4m8XEzegV+UkWf4INXlkg30BrLtQSJNSBV0rOGkVgkUDci0Nid/tZHO1P2rdgOB" as="fetch" type="application/wasm"></head>
   <body>
     <!-- Keep this in sync with public/index.html for local web hosting. -->
     <input type="file" id="viewkai-file-input" accept="application/pdf,.pdf" style="display:none" />
@@ -39,8 +39,8 @@
     </script>
     
 <script type="module">
-import init, * as bindings from './viewkai-web-4732daa5548036ee.js';
-const wasm = await init({ module_or_path: './viewkai-web-4732daa5548036ee_bg.wasm' });
+import init, * as bindings from './viewkai-web-ffba0136e3ee42f6.js';
+const wasm = await init({ module_or_path: './viewkai-web-ffba0136e3ee42f6_bg.wasm' });
 
 
 window.wasmBindings = bindings;
