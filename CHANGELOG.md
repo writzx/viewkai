@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] — 2026-04-21 — Application Shell
+
+### Phase 0 — Layout engine refactor + baseline metrics
+- Captured `v0.1.1` baseline metrics under `.sisyphus/metrics/`
+- Added `ViewMode` enum (`Single`, `Continuous`, `Spread { cover_separate }`) to `viewkai-core`, re-exported as `viewkai::ViewMode`
+- Refactored `Viewer::show_pages()` to dispatch by mode; `Continuous` behavior unchanged
+- Extracted shared layout helpers for Phase C reuse
+
+### Phase A — Document outline (S6.1)
+- Added `OutlinePlugin` (built-in) that extracts PDF bookmarks and renders a collapsible tree sidebar
+- New public types: `Outline`, `OutlineNode`, `OutlineNodeId`, `Destination`, `DestPosition` in `viewkai-core`
+- `Document::outline()` with eager `OnceCell<Arc<Outline>>` caching
+- `Viewer::document_arc()`, `Viewer::outline()` / `outline_mut()`, `Viewer::goto_destination()`
+- `Ctrl+Shift+O` sidebar toggle in `viewkai-app` and `viewkai-web`
+- `viewkai::init()` reexport added
+- 10+ new tests; `bookmarks.pdf` fixture
+
+### Phase B — Page thumbnails (S6.2)
+- Added `ThumbnailPlugin` (built-in) with `ThumbnailCache` (64 MB LRU, separate from main texture cache)
+- Engine helper `render_thumbnail(doc, page, 120px)` using `PdfRenderConfig::thumbnail()`
+- `Viewer::thumbnails()` / `thumbnails_mut()`, `Viewer::thumbnail_texture()` shim
+- `Ctrl+Shift+T` toggle; tabbed sidebar (Outline + Thumbnails tabs) in both crates
+- 8+ new tests; budget enforcement tested
+
+### Phase C — Viewing modes (S7.1)
+- `ViewMode::Single`: one centered page, `PgUp`/`PgDn`/`Home`/`End`/`Space` navigation
+- `ViewMode::Spread { cover_separate }`: two-up pages, `Ctrl+Left`/`Ctrl+Right` spread navigation
+- Mode switcher in both `viewkai-app` and `viewkai-web`
+- `Viewer::navigate_next_page()` / `navigate_prev_page()` public API
+- Phase 0 placeholder fully removed
+- 6+ new tests; 2 new snapshots
+
+### Phase D — Display-time rotation (S7.2)
+- `PdfPageRotation` enum (`None`, `R90`, `R180`, `R270`) in `viewkai-core`
+- `Viewer::rotate_page()`, `rotate_all()`, `rotation_of()`, `reset_rotations()`
+- Rotation threaded through engine rendering, texture cache, thumbnail cache
+- Text-layer hit-testing and selection/search highlight rendering corrected for rotated pages
+- `Ctrl+Shift+L` / `Ctrl+Shift+R` shortcuts; rotation submenu in app
+- 8+ new tests; 4 rotation snapshots
+
+### Phase E — Application shell (native ⇄ web parity)
+- `File` / `View` / `Help` menu bars in both `viewkai-app` and `viewkai-web`
+- `File → Open File…`: `rfd` on native, hidden `<input type="file">` on web
+- `File → Open from URL…`: `ehttp` on native, existing `start_fetch` on web
+- Top-bar URL input removed from `viewkai-web`; URL entry is menu-only
+- Window title reflects loaded document on both platforms
+- `docs/shortcuts.md` shortcut registry added
+- About dialog in both crates
+- Dep delta: `viewkai-app` +`ehttp`; `viewkai-web` +6 `web-sys` feature flags; library crates unchanged
+
 ## [0.1.1] — 2026-04-20 — Bugfix Pass
 
 ### Fixed
