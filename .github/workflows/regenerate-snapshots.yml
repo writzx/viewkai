@@ -1,0 +1,42 @@
+name: Regenerate Snapshot Baselines (one-shot, manual)
+
+# SAFETY: this workflow runs `UPDATE_SNAPSHOTS=1` and MUST remain
+# `workflow_dispatch`-only. Adding any `push`, `pull_request`, or `schedule`
+# trigger here re-introduces the snapshot-gate bypass that `.github/workflows/
+# ci.yml` explicitly removes, because every run would overwrite the committed
+# baselines with whatever the current CI happened to render.
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  regen:
+    name: regen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Download pdfium (Linux x64)
+        run: |
+          curl -fsSL --retry 5 --retry-delay 10 "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7789/pdfium-linux-x64.tgz" -o /tmp/pdfium.tgz
+          tar xzf /tmp/pdfium.tgz -C /tmp lib/
+          echo "PDFIUM_DYLIB_PATH=/tmp/lib/libpdfium.so" >> $GITHUB_ENV
+      - name: Install Vulkan/lavapipe for egui_kittest wgpu renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers vulkan-tools
+          vulkaninfo --summary || true
+      - name: Regenerate every viewkai snapshot baseline
+        run: UPDATE_SNAPSHOTS=1 cargo test -p viewkai -- --test-threads=1
+      - name: Upload regenerated baseline PNGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-baselines
+          path: crates/viewkai/tests/snapshots/*.png
+          if-no-files-found: error
+          retention-days: 7
