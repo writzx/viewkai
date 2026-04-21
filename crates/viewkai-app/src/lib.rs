@@ -33,6 +33,13 @@ pub struct App {
     page_input: String,
     page_input_focused: bool,
     total_pages: usize,
+    sidebar_tab: SidebarTab,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SidebarTab {
+    Outline,
+    Thumbnails,
 }
 
 enum LoadEvent {
@@ -110,6 +117,14 @@ const SHORTCUT_OUTLINE_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcut::
     },
     egui::Key::O,
 );
+const SHORTCUT_THUMBNAILS_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcut::new(
+    egui::Modifiers {
+        ctrl: true,
+        shift: true,
+        ..egui::Modifiers::NONE
+    },
+    egui::Key::T,
+);
 
 impl App {
     /// Create a new native app instance.
@@ -124,6 +139,7 @@ impl App {
             page_input: String::new(),
             page_input_focused: false,
             total_pages: 0,
+            sidebar_tab: SidebarTab::Outline,
         }
     }
 
@@ -319,7 +335,31 @@ impl App {
         }
         if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_OUTLINE_TOGGLE)) {
             let is_visible = self.viewer.outline().visible();
-            self.viewer.outline_mut().set_visible(!is_visible);
+            let new_visible = !is_visible;
+            self.viewer.outline_mut().set_visible(new_visible);
+            if new_visible {
+                self.sidebar_tab = SidebarTab::Outline;
+            }
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&SHORTCUT_THUMBNAILS_TOGGLE)) {
+            let is_visible = self.viewer.thumbnails().visible();
+            let new_visible = !is_visible;
+            self.viewer.thumbnails_mut().set_visible(new_visible);
+            if new_visible {
+                self.sidebar_tab = SidebarTab::Thumbnails;
+            }
+        }
+    }
+
+    fn active_sidebar_tab(&self) -> Option<SidebarTab> {
+        let outline_visible = self.viewer.outline().visible();
+        let thumbnails_visible = self.viewer.thumbnails().visible();
+
+        match (outline_visible, thumbnails_visible) {
+            (false, false) => None,
+            (true, false) => Some(SidebarTab::Outline),
+            (false, true) => Some(SidebarTab::Thumbnails),
+            (true, true) => Some(self.sidebar_tab),
         }
     }
 
@@ -399,15 +439,48 @@ impl eframe::App for App {
                     });
             });
 
-        if self.viewer.outline().visible() {
+        if let Some(active_tab) = self.active_sidebar_tab() {
             egui::Panel::left("viewkai.sidebar")
                 .default_size(260.0)
                 .resizable(true)
                 .show_inside(ui, |ui| {
-                    ui.heading("Outline");
+                    let outline_visible = self.viewer.outline().visible();
+                    let thumbnails_visible = self.viewer.thumbnails().visible();
+
+                    ui.horizontal(|ui| {
+                        if ui
+                            .add_enabled(
+                                outline_visible,
+                                egui::Button::new("Outline")
+                                    .selected(self.sidebar_tab == SidebarTab::Outline),
+                            )
+                            .clicked()
+                        {
+                            self.sidebar_tab = SidebarTab::Outline;
+                        }
+
+                        if ui
+                            .add_enabled(
+                                thumbnails_visible,
+                                egui::Button::new("Thumbnails")
+                                    .selected(self.sidebar_tab == SidebarTab::Thumbnails),
+                            )
+                            .clicked()
+                        {
+                            self.sidebar_tab = SidebarTab::Thumbnails;
+                        }
+                    });
                     ui.separator();
                     let doc = self.viewer.document_arc();
-                    self.viewer.outline_mut().render_panel(ui, doc.as_deref());
+
+                    match active_tab {
+                        SidebarTab::Outline => {
+                            self.viewer.outline_mut().render_panel(ui, doc.as_deref())
+                        }
+                        SidebarTab::Thumbnails => {
+                            self.viewer.thumbnails_mut().render_panel(ui, doc.as_deref())
+                        }
+                    }
                 });
         }
 

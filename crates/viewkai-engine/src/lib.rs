@@ -24,6 +24,8 @@ pub mod search;
 pub mod text;
 /// Document outline extraction support built on top of pdfium-render.
 pub mod outline;
+/// Thumbnail rendering support built on top of pdfium-render.
+pub mod thumbnail;
 
 use crate::error::{EngineError, Result};
 use pdfium_render::prelude::*;
@@ -36,6 +38,7 @@ use viewkai_core::{Outline, PageIndex, PageSize, PageText, RawImage};
 
 pub use outline::extract_outline;
 pub use search::search_page;
+pub use thumbnail::render_thumbnail;
 pub use text::extract_page_text;
 
 // ── Global pdfium singleton ──────────────────────────────────────────────────

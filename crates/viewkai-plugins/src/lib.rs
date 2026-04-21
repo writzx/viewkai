@@ -10,12 +10,14 @@ mod outline;
 mod plugin;
 mod registry;
 mod search;
+mod thumbnail;
 mod text_layer;
 
 pub use outline::OutlinePlugin;
 pub use plugin::{PluginContext, PointerEvent, ViewerPlugin};
 pub use registry::PluginRegistry;
 pub use search::SearchPlugin;
+pub use thumbnail::ThumbnailPlugin;
 pub use text_layer::TextLayerPlugin;
 
 pub(crate) mod sealed {

@@ -36,7 +36,8 @@ use viewkai_plugins::PluginRegistry;
 pub use viewkai_core::outline::{Destination, DestPosition, OutlineNode, OutlineNodeId};
 pub use viewkai_core::ViewMode;
 pub use viewkai_plugins::{
-    OutlinePlugin, PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ViewerPlugin,
+    OutlinePlugin, PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ThumbnailPlugin,
+    ViewerPlugin,
 };
 
 /// Per-page rendering state.
@@ -111,6 +112,7 @@ impl Viewer {
                 Box::new(TextLayerPlugin::new()),
                 Box::new(SearchPlugin::new()),
                 Box::new(OutlinePlugin::new()),
+                Box::new(ThumbnailPlugin::new()),
             ]),
             pending_scroll: Cell::new(None),
             selection_color: Color32::from_rgba_unmultiplied(70, 120, 210, 96),
@@ -223,6 +225,41 @@ impl Viewer {
             Some(plugin) => plugin,
             None => panic!("OutlinePlugin is always registered"),
         }
+    }
+
+    /// Returns a shared reference to the built-in thumbnail plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the thumbnail plugin is not registered.
+    #[must_use]
+    pub fn thumbnails(&self) -> &ThumbnailPlugin {
+        match self.plugins.get::<ThumbnailPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("ThumbnailPlugin is always registered"),
+        }
+    }
+
+    /// Returns a mutable reference to the built-in thumbnail plugin.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the thumbnail plugin is not registered.
+    pub fn thumbnails_mut(&mut self) -> &mut ThumbnailPlugin {
+        match self.plugins.get_mut::<ThumbnailPlugin>() {
+            Some(plugin) => plugin,
+            None => panic!("ThumbnailPlugin is always registered"),
+        }
+    }
+
+    /// Return a cached page thumbnail texture, queueing rendering when absent.
+    pub fn thumbnail_texture(
+        &mut self,
+        ui: &mut egui::Ui,
+        page: PageIndex,
+    ) -> Option<egui::TextureHandle> {
+        let doc_arc = self.document_arc()?;
+        self.thumbnails_mut().thumbnail_texture(ui, &doc_arc, page)
     }
 
     /// Open the search overlay.

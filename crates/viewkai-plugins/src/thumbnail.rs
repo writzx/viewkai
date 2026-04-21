@@ -1,0 +1,334 @@
+//! Thumbnail sidebar plugin.
+
+use std::collections::HashMap;
+
+use egui::{Color32, TextureHandle, TextureOptions, Ui, Vec2};
+use viewkai_core::{PageIndex, PointsRect};
+use viewkai_engine::Document;
+
+use crate::{PluginContext, ViewerPlugin, sealed};
+
+const DEFAULT_THUMBNAIL_BUDGET: usize = 64 * 1024 * 1024;
+const THUMBNAILS_PER_FRAME: usize = 3;
+
+struct CacheEntry {
+    texture: TextureHandle,
+    byte_size: usize,
+    last_accessed_frame: u64,
+}
+
+struct ThumbnailCache {
+    entries: HashMap<PageIndex, CacheEntry>,
+    total_bytes: usize,
+    budget_bytes: usize,
+    frame_counter: u64,
+}
+
+impl ThumbnailCache {
+    fn new(budget_bytes: usize) -> Self {
+        Self {
+            entries: HashMap::new(),
+            total_bytes: 0,
+            budget_bytes,
+            frame_counter: 0,
+        }
+    }
+
+    fn get(&mut self, page: PageIndex) -> Option<TextureHandle> {
+        let entry = self.entries.get_mut(&page)?;
+        entry.last_accessed_frame = self.frame_counter;
+        Some(entry.texture.clone())
+    }
+
+    fn insert(&mut self, page: PageIndex, texture: TextureHandle, byte_size: usize) {
+        if let Some(old) = self.entries.remove(&page) {
+            self.total_bytes -= old.byte_size;
+        }
+
+        if byte_size > self.budget_bytes {
+            return;
+        }
+
+        self.entries.insert(
+            page,
+            CacheEntry {
+                texture,
+                byte_size,
+                last_accessed_frame: self.frame_counter,
+            },
+        );
+        self.total_bytes += byte_size;
+        self.evict_to_budget();
+    }
+
+    fn total_bytes(&self) -> usize {
+        self.total_bytes
+    }
+
+    fn set_budget(&mut self, bytes: usize) {
+        self.budget_bytes = bytes;
+        self.evict_to_budget();
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.total_bytes = 0;
+    }
+
+    fn evict_to_budget(&mut self) {
+        while self.total_bytes > self.budget_bytes {
+            let Some(lru_page) = self
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.last_accessed_frame)
+                .map(|(page, _)| *page)
+            else {
+                break;
+            };
+
+            let removed = self
+                .entries
+                .remove(&lru_page)
+                .expect("lru page came from cache entries");
+            self.total_bytes -= removed.byte_size;
+        }
+    }
+
+    fn tick_frame(&mut self) {
+        self.frame_counter = self.frame_counter.saturating_add(1);
+    }
+}
+
+/// Plugin that renders a page-thumbnail sidebar and caches textures separately
+/// from the main page texture cache.
+pub struct ThumbnailPlugin {
+    visible: bool,
+    cache: ThumbnailCache,
+    pending_pages: Vec<PageIndex>,
+    thumbnail_width: u32,
+    pending_click_page: Option<PageIndex>,
+    document_identity: Option<usize>,
+}
+
+impl ThumbnailPlugin {
+    /// Default cache budget for thumbnail textures.
+    pub const DEFAULT_CACHE_BUDGET: usize = DEFAULT_THUMBNAIL_BUDGET;
+
+    /// Create a new thumbnail plugin.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return the cached thumbnail texture for a page or queue rendering.
+    pub fn thumbnail_texture(
+        &mut self,
+        ui: &mut Ui,
+        document: &Document,
+        page: PageIndex,
+    ) -> Option<TextureHandle> {
+        self.sync_document(document);
+
+        if let Some(handle) = self.cache.get(page) {
+            return Some(handle);
+        }
+
+        if !self.pending_pages.contains(&page) {
+            self.pending_pages.push(page);
+            ui.ctx().request_repaint();
+        }
+
+        None
+    }
+
+    /// Render the thumbnail sidebar panel.
+    pub fn render_panel(&mut self, ui: &mut Ui, document: Option<&Document>) {
+        let Some(doc) = document else {
+            ui.label("No document loaded");
+            return;
+        };
+
+        self.sync_document(doc);
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for page_idx in 0..doc.page_count() {
+                let page = PageIndex(page_idx);
+                let texture = self.thumbnail_texture(ui, doc, page);
+                let label = format!("Page {}", page_idx + 1);
+                let mut clicked = false;
+
+                ui.vertical(|ui| {
+                    let preview_height = self.preview_height_for(doc, page);
+                    let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
+                    let (rect, response) = ui.allocate_exact_size(preview_size, egui::Sense::click());
+
+                    if let Some(texture) = texture {
+                        ui.painter().image(
+                            texture.id(),
+                            rect,
+                            egui::Rect::from_min_max(
+                                egui::pos2(0.0, 0.0),
+                                egui::pos2(1.0, 1.0),
+                            ),
+                            Color32::WHITE,
+                        );
+                    } else {
+                        ui.painter().rect_filled(rect, 4.0, Color32::from_gray(210));
+                        ui.painter().text(
+                            rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            "Loading…",
+                            egui::TextStyle::Body.resolve(ui.style()),
+                            Color32::from_gray(60),
+                        );
+                    }
+
+                    clicked |= response.clicked();
+                    clicked |= ui.selectable_label(false, label).clicked();
+                    ui.add_space(8.0);
+                });
+
+                if clicked {
+                    self.pending_click_page = Some(page);
+                    ui.ctx().request_repaint();
+                }
+            }
+        });
+    }
+
+    /// Set the thumbnail cache budget in bytes.
+    pub fn set_cache_budget(&mut self, bytes: usize) {
+        self.cache.set_budget(bytes);
+    }
+
+    /// Return the current thumbnail cache usage in bytes.
+    #[must_use]
+    pub fn cache_bytes(&self) -> usize {
+        self.cache.total_bytes()
+    }
+
+    /// Return whether the thumbnail sidebar is visible.
+    #[must_use]
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    /// Show or hide the thumbnail sidebar.
+    pub fn set_visible(&mut self, visible: bool) {
+        self.visible = visible;
+    }
+
+    /// Return the currently queued click target, if any.
+    #[must_use]
+    pub fn pending_click_page(&self) -> Option<PageIndex> {
+        self.pending_click_page
+    }
+
+    fn preview_height_for(&self, document: &Document, page: PageIndex) -> f32 {
+        document
+            .page_size(page)
+            .map(|size| {
+                let aspect = if size.width_pt > 0.0 {
+                    size.height_pt / size.width_pt
+                } else {
+                    1.4
+                };
+                (self.thumbnail_width as f32 * aspect).max(1.0)
+            })
+            .unwrap_or(self.thumbnail_width as f32 * 1.4)
+    }
+
+    fn reset_document_state(&mut self) {
+        self.cache.clear();
+        self.pending_pages.clear();
+        self.pending_click_page = None;
+    }
+
+    fn sync_document(&mut self, document: &Document) {
+        let identity = document as *const Document as usize;
+        if self.document_identity != Some(identity) {
+            self.reset_document_state();
+            self.document_identity = Some(identity);
+        }
+    }
+}
+
+impl Default for ThumbnailPlugin {
+    fn default() -> Self {
+        Self {
+            visible: false,
+            cache: ThumbnailCache::new(DEFAULT_THUMBNAIL_BUDGET),
+            pending_pages: Vec::new(),
+            thumbnail_width: 120,
+            pending_click_page: None,
+            document_identity: None,
+        }
+    }
+}
+
+impl sealed::Sealed for ThumbnailPlugin {}
+
+impl ViewerPlugin for ThumbnailPlugin {
+    fn id(&self) -> &'static str {
+        "viewkai.thumbnail"
+    }
+
+    fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
+        ui.checkbox(&mut self.visible, "Show Thumbnails");
+    }
+
+    fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
+        self.cache.tick_frame();
+
+        let Some(document) = ctx.document else {
+            if self.document_identity.take().is_some() {
+                self.reset_document_state();
+            }
+            return;
+        };
+
+        self.sync_document(document);
+
+        let pending = self
+            .pending_pages
+            .drain(..self.pending_pages.len().min(THUMBNAILS_PER_FRAME))
+            .collect::<Vec<_>>();
+
+        for page in pending {
+            if self.cache.get(page).is_some() {
+                continue;
+            }
+
+            if let Ok(raw) = viewkai_engine::render_thumbnail(document, page, self.thumbnail_width) {
+                let byte_size = raw.pixels.len();
+                let image = egui::ColorImage::from_rgba_unmultiplied(
+                    [raw.width as usize, raw.height as usize],
+                    &raw.pixels,
+                );
+                let handle = ctx.egui_ctx.load_texture(
+                    format!("viewkai/thumbnail/{:p}/{}", document, page.0),
+                    image,
+                    TextureOptions::LINEAR,
+                );
+                self.cache.insert(page, handle, byte_size);
+            }
+        }
+
+        if let Some(page) = self.pending_click_page.take() {
+            ctx.request_scroll_to(
+                page,
+                PointsRect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 1.0,
+                    height: 1.0,
+                },
+            );
+            ctx.request_repaint();
+        }
+
+        if !self.pending_pages.is_empty() {
+            ctx.request_repaint();
+        }
+    }
+}
