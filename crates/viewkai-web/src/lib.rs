@@ -5,7 +5,7 @@ use eframe::egui;
 #[cfg(target_arch = "wasm32")]
 use std::sync::{Arc, Mutex};
 #[cfg(target_arch = "wasm32")]
-use viewkai::{Viewer, zoom::ZoomState};
+use viewkai::{ViewMode, Viewer, zoom::ZoomState};
 #[cfg(target_arch = "wasm32")]
 use viewkai_core::PageIndex;
 #[cfg(target_arch = "wasm32")]
@@ -57,6 +57,23 @@ const SHORTCUT_THUMBNAILS_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcu
     },
     egui::Key::T,
 );
+#[cfg(target_arch = "wasm32")]
+const VIEW_MODE_OPTIONS: [(&str, ViewMode); 4] = [
+    ("Single Page", ViewMode::Single),
+    ("Continuous", ViewMode::Continuous),
+    (
+        "Spread (Cover Alone)",
+        ViewMode::Spread {
+            cover_separate: true,
+        },
+    ),
+    (
+        "Spread (All Pairs)",
+        ViewMode::Spread {
+            cover_separate: false,
+        },
+    ),
+];
 
 #[cfg(target_arch = "wasm32")]
 /// Current loading lifecycle for the web demo application.
@@ -333,6 +350,31 @@ impl DemoApp {
             (true, true) => Some(self.sidebar_tab),
         }
     }
+
+    fn view_mode_label(mode: ViewMode) -> &'static str {
+        match mode {
+            ViewMode::Single => "Single Page",
+            ViewMode::Continuous => "Continuous",
+            ViewMode::Spread {
+                cover_separate: true,
+            } => "Spread (Cover Alone)",
+            ViewMode::Spread {
+                cover_separate: false,
+            } => "Spread (All Pairs)",
+        }
+    }
+
+    fn view_mode_selector_ui(&mut self, ui: &mut egui::Ui) {
+        egui::ComboBox::from_id_salt("view_mode_combo")
+            .selected_text(Self::view_mode_label(self.viewer.view_mode()))
+            .show_ui(ui, |ui| {
+                for (label, mode) in VIEW_MODE_OPTIONS {
+                    if ui.selectable_label(self.viewer.view_mode() == mode, label).clicked() {
+                        self.viewer.set_view_mode(mode);
+                    }
+                }
+            });
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -402,6 +444,9 @@ impl eframe::App for DemoApp {
                 ui.separator();
 
                 zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
+                ui.separator();
+                ui.label("Mode:");
+                self.view_mode_selector_ui(ui);
                 ui.separator();
                 self.viewer.show_plugin_toolbars(ui);
             });

@@ -1,7 +1,7 @@
 //! Native PDF viewer application built on `viewkai`.
 
 use eframe::egui;
-use viewkai::{Viewer, zoom::ZoomState};
+use viewkai::{ViewMode, Viewer, zoom::ZoomState};
 use viewkai_core::PageIndex;
 use viewkai_engine::{Document, init};
 
@@ -125,6 +125,22 @@ const SHORTCUT_THUMBNAILS_TOGGLE: egui::KeyboardShortcut = egui::KeyboardShortcu
     },
     egui::Key::T,
 );
+const VIEW_MODE_OPTIONS: [(&str, ViewMode); 4] = [
+    ("Single Page", ViewMode::Single),
+    ("Continuous", ViewMode::Continuous),
+    (
+        "Spread (Cover Alone)",
+        ViewMode::Spread {
+            cover_separate: true,
+        },
+    ),
+    (
+        "Spread (All Pairs)",
+        ViewMode::Spread {
+            cover_separate: false,
+        },
+    ),
+];
 
 impl App {
     /// Create a new native app instance.
@@ -378,6 +394,16 @@ impl App {
             }
         }
     }
+
+    fn view_mode_selector_ui(&mut self, ui: &mut egui::Ui) {
+        let mut selected = self.viewer.view_mode();
+        for (label, mode) in VIEW_MODE_OPTIONS {
+            ui.radio_value(&mut selected, mode, label);
+        }
+        if selected != self.viewer.view_mode() {
+            self.viewer.set_view_mode(selected);
+        }
+    }
 }
 
 impl eframe::App for App {
@@ -400,6 +426,9 @@ impl eframe::App for App {
                 ui.separator();
 
                 zoom_ui::zoom_toolbar_ui(ui, &mut self.viewer);
+                ui.separator();
+                ui.label("Mode:");
+                self.view_mode_selector_ui(ui);
                 ui.separator();
                 self.viewer.show_plugin_toolbars(ui);
             });

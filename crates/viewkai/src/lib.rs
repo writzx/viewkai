@@ -85,6 +85,8 @@ pub struct Viewer {
     state: ViewerState,
     render: RenderState,
     view_mode: ViewMode,
+    current_page_single_mode: Option<PageIndex>,
+    current_spread_index: Option<usize>,
     pending_scroll_to_page: Option<usize>,
     plugins: PluginRegistry,
     pending_scroll: Cell<Option<(PageIndex, PointsRect)>>,
@@ -107,6 +109,8 @@ impl Viewer {
             state: ViewerState::Empty,
             render: RenderState::new(),
             view_mode: ViewMode::Continuous,
+            current_page_single_mode: None,
+            current_spread_index: None,
             pending_scroll_to_page: None,
             plugins: PluginRegistry::new(vec![
                 Box::new(TextLayerPlugin::new()),
@@ -136,7 +140,28 @@ impl Viewer {
 
     /// Set the active page-layout mode for subsequent renders.
     pub fn set_view_mode(&mut self, mode: ViewMode) {
+        if self.view_mode == mode {
+            return;
+        }
+
+        let page_count = self.page_count();
+        let anchor_page = self.mode_anchor_page();
         self.view_mode = mode;
+
+        match mode {
+            ViewMode::Single => {
+                self.current_page_single_mode = anchor_page
+                    .or_else(|| self.last_visible_pages.first().copied())
+                    .and_then(|page| Self::clamp_page_index(page_count, page.0))
+                    .or_else(|| Self::clamp_page_index(page_count, 0));
+            }
+            ViewMode::Spread { cover_separate } => {
+                self.current_spread_index = anchor_page.map(|page| {
+                    Self::spread_index_for_page(page_count, cover_separate, page.0)
+                });
+            }
+            ViewMode::Continuous => {}
+        }
     }
 
     /// Return the currently configured page-layout mode.
@@ -149,7 +174,78 @@ impl Viewer {
     ///
     /// This sets a pending scroll target that is applied on the next `show()` call.
     pub fn scroll_to_page(&mut self, idx: usize) {
-        self.pending_scroll_to_page = Some(idx);
+        match self.view_mode {
+            ViewMode::Single => {
+                self.current_page_single_mode = Self::clamp_page_index(self.page_count(), idx);
+            }
+            ViewMode::Spread { cover_separate } => {
+                let page_count = self.page_count();
+                self.current_spread_index = if page_count == 0 {
+                    None
+                } else {
+                    Some(Self::spread_index_for_page(page_count, cover_separate, idx))
+                };
+            }
+            ViewMode::Continuous => {
+                self.pending_scroll_to_page = Some(idx);
+            }
+        }
+    }
+
+    /// Advance to the next discrete page or spread in the current view mode.
+    pub fn navigate_next_page(&mut self) {
+        let page_count = self.page_count();
+        if page_count == 0 {
+            return;
+        }
+
+        match self.view_mode {
+            ViewMode::Single => {
+                let current = self.current_page_single_mode.map_or(0, |page| page.0);
+                self.current_page_single_mode = Some(PageIndex((current + 1).min(page_count - 1)));
+            }
+            ViewMode::Spread { cover_separate } => {
+                let current = self.current_spread_index.unwrap_or_else(|| {
+                    self.mode_anchor_page().map_or(0, |page| {
+                        Self::spread_index_for_page(page_count, cover_separate, page.0)
+                    })
+                });
+                self.current_spread_index = Some(
+                    (current + 1).min(Self::spread_count(page_count, cover_separate) - 1),
+                );
+            }
+            ViewMode::Continuous => {}
+        }
+    }
+
+    /// Move to the previous discrete page or spread in the current view mode.
+    pub fn navigate_prev_page(&mut self) {
+        let page_count = self.page_count();
+        if page_count == 0 {
+            return;
+        }
+
+        match self.view_mode {
+            ViewMode::Single => {
+                let current = self.current_page_single_mode.map_or(0, |page| page.0);
+                self.current_page_single_mode = Some(PageIndex(current.saturating_sub(1)));
+            }
+            ViewMode::Spread { cover_separate } => {
+                let current = self.current_spread_index.unwrap_or_else(|| {
+                    self.mode_anchor_page().map_or(0, |page| {
+                        Self::spread_index_for_page(page_count, cover_separate, page.0)
+                    })
+                });
+                self.current_spread_index = Some(current.saturating_sub(1));
+            }
+            ViewMode::Continuous => {}
+        }
+    }
+
+    /// Return the pages visible in the most recent rendered frame.
+    #[must_use]
+    pub fn visible_pages(&self) -> &[PageIndex] {
+        &self.last_visible_pages
     }
 
     /// Returns a shared reference to the built-in text-layer plugin.
@@ -519,6 +615,8 @@ impl Viewer {
                     .collect();
 
                 self.render.cache.clear();
+                self.current_page_single_mode = None;
+                self.current_spread_index = None;
                 self.pending_scroll_to_page = None;
                 self.pending_scroll.set(None);
                 self.last_visible_pages.clear();
@@ -547,6 +645,8 @@ impl Viewer {
     pub fn clear(&mut self) {
         self.state = ViewerState::Empty;
         self.render.cache.clear();
+        self.current_page_single_mode = None;
+        self.current_spread_index = None;
         self.pending_scroll_to_page = None;
         self.pending_scroll.set(None);
         self.last_visible_pages.clear();
@@ -639,6 +739,8 @@ impl Viewer {
                     &self.render.visibility,
                     self.render.zoom,
                     &mut self.pending_scroll_to_page,
+                    &mut self.current_page_single_mode,
+                    &mut self.current_spread_index,
                     &mut self.plugins,
                     &mut self.last_visible_pages,
                     self.selection_color,
@@ -667,6 +769,8 @@ impl Viewer {
         visibility: &VisibilityTracker,
         zoom: ZoomState,
         viewer_pending_scroll: &mut Option<usize>,
+        current_page_single_mode: &mut Option<PageIndex>,
+        current_spread_index: &mut Option<usize>,
         plugins: &mut PluginRegistry,
         last_visible_pages: &mut Vec<PageIndex>,
         selection_color: Color32,
@@ -674,6 +778,20 @@ impl Viewer {
         pending_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
     ) {
         match view_mode {
+            ViewMode::Single => Self::show_pages_single(
+                ui,
+                document,
+                pages,
+                cache,
+                zoom,
+                viewer_pending_scroll,
+                current_page_single_mode,
+                plugins,
+                last_visible_pages,
+                selection_color,
+                library_shortcuts_enabled,
+                pending_scroll,
+            ),
             ViewMode::Continuous => Self::show_pages_continuous(
                 ui,
                 document,
@@ -688,7 +806,133 @@ impl Viewer {
                 library_shortcuts_enabled,
                 pending_scroll,
             ),
-            mode => Self::show_placeholder_pending_phase_c(ui, mode),
+            ViewMode::Spread { cover_separate } => Self::show_pages_spread(
+                ui,
+                document,
+                pages,
+                cache,
+                zoom,
+                viewer_pending_scroll,
+                current_spread_index,
+                cover_separate,
+                plugins,
+                last_visible_pages,
+                selection_color,
+                library_shortcuts_enabled,
+                pending_scroll,
+            ),
+        }
+    }
+
+    // justify: page rendering stays snapshot-stable when the existing render inputs
+    // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
+    #[allow(clippy::too_many_arguments)]
+    fn show_pages_single(
+        ui: &mut egui::Ui,
+        document: &Arc<Document>,
+        pages: &[PageState],
+        cache: &mut TextureCache,
+        zoom: ZoomState,
+        viewer_pending_scroll: &mut Option<usize>,
+        current_page: &mut Option<PageIndex>,
+        plugins: &mut PluginRegistry,
+        last_visible_pages: &mut Vec<PageIndex>,
+        selection_color: Color32,
+        library_shortcuts_enabled: bool,
+        pending_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
+    ) {
+        if pages.is_empty() {
+            last_visible_pages.clear();
+            ui.centered_and_justified(|ui| ui.label("No pages in document"));
+            return;
+        }
+
+        if let Some(target) = viewer_pending_scroll.take() {
+            *current_page = Self::clamp_page_index(pages.len(), target);
+        }
+        if let Some((page, _)) = pending_scroll.take() {
+            *current_page = Self::clamp_page_index(pages.len(), page.0);
+        }
+
+        let mut page_idx = current_page.map_or(0, |page| page.0).min(pages.len() - 1);
+        if library_shortcuts_enabled {
+            let next = ui.input_mut(|i| {
+                i.consume_key(egui::Modifiers::NONE, egui::Key::PageDown)
+                    || i.consume_key(egui::Modifiers::NONE, egui::Key::Space)
+            });
+            let prev = ui.input_mut(|i| {
+                i.consume_key(egui::Modifiers::NONE, egui::Key::PageUp)
+                    || i.consume_key(egui::Modifiers::SHIFT, egui::Key::Space)
+            });
+            let first = ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Home));
+            let last = ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::End));
+
+            if next {
+                page_idx = (page_idx + 1).min(pages.len() - 1);
+            }
+            if prev {
+                page_idx = page_idx.saturating_sub(1);
+            }
+            if first {
+                page_idx = 0;
+            }
+            if last {
+                page_idx = pages.len() - 1;
+            }
+        }
+        *current_page = Some(PageIndex(page_idx));
+
+        let page = &pages[page_idx];
+        let available_size = ui.available_size_before_wrap();
+        let viewport_size = Vec2::new(available_size.x.max(1.0), available_size.y.max(1.0));
+        let (viewport_rect, _) = ui.allocate_exact_size(viewport_size, Sense::hover());
+        let effective_zoom = zoom.effective_zoom(
+            viewport_rect.width(),
+            viewport_rect.height(),
+            page.size_pt.x,
+            page.size_pt.y,
+        );
+        let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+        let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
+        let now = ui.input(|i| i.time);
+        let display_size = Vec2::new(page.size_pt.x * effective_zoom, page.size_pt.y * effective_zoom);
+        let page_rect = Rect::from_min_size(
+            egui::pos2(
+                viewport_rect.min.x + ((viewport_rect.width() - display_size.x) / 2.0).max(0.0),
+                viewport_rect.min.y + ((viewport_rect.height() - display_size.y) / 2.0).max(0.0),
+            ),
+            display_size,
+        );
+
+        last_visible_pages.clear();
+        last_visible_pages.push(PageIndex(page_idx));
+        Self::render_queued_pages(ui, document, cache, &[page_idx], zoom_bucket, dpi, now);
+
+        let egui_ctx = ui.ctx().clone();
+        let mut ctx = Self::make_plugin_context(
+            Some(document.as_ref()),
+            effective_zoom,
+            last_visible_pages.as_slice(),
+            &egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            None,
+            pending_scroll,
+        );
+        Self::paint_positioned_page(
+            ui,
+            cache,
+            PageIndex(page_idx),
+            page_rect,
+            effective_zoom,
+            zoom_bucket,
+            now,
+            plugins,
+            &mut ctx,
+        );
+
+        if ctx.repaint_requested() {
+            egui_ctx.request_repaint();
         }
     }
 
@@ -787,11 +1031,171 @@ impl Viewer {
             });
     }
 
-    // TEMPORARY: deleted in Plan 03 Phase C.
-    fn show_placeholder_pending_phase_c(ui: &mut egui::Ui, mode: ViewMode) {
-        ui.centered_and_justified(|ui| {
-            ui.label(format!("ViewMode {:?} ships in Plan 03 Phase C", mode));
+    // justify: page rendering stays snapshot-stable when the existing render inputs
+    // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
+    #[allow(clippy::too_many_arguments)]
+    fn show_pages_spread(
+        ui: &mut egui::Ui,
+        document: &Arc<Document>,
+        pages: &[PageState],
+        cache: &mut TextureCache,
+        zoom: ZoomState,
+        viewer_pending_scroll: &mut Option<usize>,
+        current_spread_index: &mut Option<usize>,
+        cover_separate: bool,
+        plugins: &mut PluginRegistry,
+        last_visible_pages: &mut Vec<PageIndex>,
+        selection_color: Color32,
+        library_shortcuts_enabled: bool,
+        pending_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
+    ) {
+        if pages.is_empty() {
+            last_visible_pages.clear();
+            ui.centered_and_justified(|ui| ui.label("No pages in document"));
+            return;
+        }
+
+        if let Some(target) = viewer_pending_scroll.take() {
+            *current_spread_index = Some(Self::spread_index_for_page(
+                pages.len(),
+                cover_separate,
+                target,
+            ));
+            pending_scroll.set(None);
+        }
+        if let Some((page, _)) = pending_scroll.take() {
+            *current_spread_index = Some(Self::spread_index_for_page(
+                pages.len(),
+                cover_separate,
+                page.0,
+            ));
+        }
+
+        let spread_count = Self::spread_count(pages.len(), cover_separate);
+        let mut spread_idx = current_spread_index
+            .unwrap_or(0)
+            .min(spread_count.saturating_sub(1));
+        if library_shortcuts_enabled {
+            let prev = ui.input_mut(|i| {
+                i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowLeft)
+            });
+            let next = ui.input_mut(|i| {
+                i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowRight)
+            });
+
+            if prev {
+                spread_idx = spread_idx.saturating_sub(1);
+            }
+            if next {
+                spread_idx = (spread_idx + 1).min(spread_count.saturating_sub(1));
+            }
+        }
+        *current_spread_index = Some(spread_idx);
+
+        let (left_idx, right_idx) = Self::spread_pages(pages.len(), cover_separate, spread_idx);
+        let left_page = &pages[left_idx];
+        let right_page = right_idx.and_then(|idx| pages.get(idx));
+        let spread_width_pt = left_page.size_pt.x
+            + right_page.map_or(0.0, |page| page.size_pt.x)
+            + if right_page.is_some() { 8.0 } else { 0.0 };
+        let spread_height_pt = right_page
+            .map_or(left_page.size_pt.y, |page| left_page.size_pt.y.max(page.size_pt.y));
+
+        let available_size = ui.available_size_before_wrap();
+        let viewport_size = Vec2::new(available_size.x.max(1.0), available_size.y.max(1.0));
+        let (viewport_rect, _) = ui.allocate_exact_size(viewport_size, Sense::hover());
+        let effective_zoom = zoom.effective_zoom(
+            viewport_rect.width(),
+            viewport_rect.height(),
+            spread_width_pt,
+            spread_height_pt,
+        );
+        let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+        let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
+        let now = ui.input(|i| i.time);
+
+        let left_size = Vec2::new(
+            left_page.size_pt.x * effective_zoom,
+            left_page.size_pt.y * effective_zoom,
+        );
+        let right_size = right_page.map(|page| {
+            Vec2::new(page.size_pt.x * effective_zoom, page.size_pt.y * effective_zoom)
         });
+        let spread_width_px = left_size.x
+            + right_size.map_or(0.0, |size| size.x)
+            + if right_size.is_some() { 8.0 } else { 0.0 };
+        let spread_height_px = right_size.map_or(left_size.y, |size| left_size.y.max(size.y));
+        let spread_origin = egui::pos2(
+            viewport_rect.min.x + ((viewport_rect.width() - spread_width_px) / 2.0).max(0.0),
+            viewport_rect.min.y + ((viewport_rect.height() - spread_height_px) / 2.0).max(0.0),
+        );
+        let left_rect = Rect::from_min_size(
+            egui::pos2(
+                spread_origin.x,
+                spread_origin.y + ((spread_height_px - left_size.y) / 2.0).max(0.0),
+            ),
+            left_size,
+        );
+        let right_rect = right_size.map(|size| {
+            Rect::from_min_size(
+                egui::pos2(
+                    spread_origin.x + left_size.x + 8.0,
+                    spread_origin.y + ((spread_height_px - size.y) / 2.0).max(0.0),
+                ),
+                size,
+            )
+        });
+
+        let mut to_render = vec![left_idx];
+        if let Some(right_idx) = right_idx {
+            to_render.push(right_idx);
+        }
+        last_visible_pages.clear();
+        last_visible_pages.push(PageIndex(left_idx));
+        if let Some(right_idx) = right_idx {
+            last_visible_pages.push(PageIndex(right_idx));
+        }
+        Self::render_queued_pages(ui, document, cache, &to_render, zoom_bucket, dpi, now);
+
+        let egui_ctx = ui.ctx().clone();
+        let mut ctx = Self::make_plugin_context(
+            Some(document.as_ref()),
+            effective_zoom,
+            last_visible_pages.as_slice(),
+            &egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            None,
+            pending_scroll,
+        );
+        Self::paint_positioned_page(
+            ui,
+            cache,
+            PageIndex(left_idx),
+            left_rect,
+            effective_zoom,
+            zoom_bucket,
+            now,
+            plugins,
+            &mut ctx,
+        );
+        if let Some((right_idx, right_rect)) = right_idx.zip(right_rect) {
+            Self::paint_positioned_page(
+                ui,
+                cache,
+                PageIndex(right_idx),
+                right_rect,
+                effective_zoom,
+                zoom_bucket,
+                now,
+                plugins,
+                &mut ctx,
+            );
+        }
+
+        if ctx.repaint_requested() {
+            egui_ctx.request_repaint();
+        }
     }
 
     fn compute_page_layout(pages: &[PageState], effective_zoom: f32) -> (Vec<f32>, Vec<f32>) {
@@ -978,6 +1382,167 @@ impl Viewer {
                     plugin.draw_page_overlay(page_index, &mut overlay_ui, plugin_ctx);
                 }
                 plugin_ctx.page_rect_screen = None;
+            }
+        }
+    }
+
+    fn paint_positioned_page(
+        ui: &mut egui::Ui,
+        cache: &mut TextureCache,
+        page_index: PageIndex,
+        page_rect: Rect,
+        effective_zoom: f32,
+        zoom_bucket: u8,
+        now: f64,
+        plugins: &mut PluginRegistry,
+        plugin_ctx: &mut PluginContext<'_>,
+    ) {
+        const PLACEHOLDER_FILL: Color32 = Color32::from_gray(220);
+
+        let key = CacheKey {
+            page_idx: page_index,
+            zoom_bucket,
+        };
+
+        if let Some(texture) = cache.get(&key, now) {
+            ui.painter().image(
+                texture.id(),
+                page_rect,
+                Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        } else {
+            let fallback = (0..6_u8).find_map(|bucket| {
+                let fallback_key = CacheKey {
+                    page_idx: page_index,
+                    zoom_bucket: bucket,
+                };
+                cache.get(&fallback_key, now).map(egui::TextureHandle::id)
+            });
+
+            if let Some(tex_id) = fallback {
+                ui.painter().image(
+                    tex_id,
+                    page_rect,
+                    Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            } else {
+                ui.painter().rect_filled(page_rect, 0.0, PLACEHOLDER_FILL);
+                egui::Spinner::new().paint_at(ui, page_rect);
+            }
+        }
+
+        let response = ui.interact(
+            page_rect,
+            ui.id().with(("viewkai-positioned-page", page_index.0)),
+            Sense::click_and_drag(),
+        );
+
+        if let Some(pointer_event) = Self::pointer_event(ui, &response, page_rect, effective_zoom) {
+            for plugin in &mut *plugins {
+                if plugin.on_pointer_event(page_index, &pointer_event, plugin_ctx) {
+                    break;
+                }
+            }
+        }
+
+        plugin_ctx.page_rect_screen = Some(page_rect);
+        let mut overlay_ui = ui.new_child(egui::UiBuilder::new().max_rect(page_rect));
+        for plugin in &mut *plugins {
+            plugin.draw_page_overlay(page_index, &mut overlay_ui, plugin_ctx);
+        }
+        plugin_ctx.page_rect_screen = None;
+    }
+
+    fn clamp_page_index(page_count: usize, idx: usize) -> Option<PageIndex> {
+        if page_count == 0 {
+            None
+        } else {
+            Some(PageIndex(idx.min(page_count - 1)))
+        }
+    }
+
+    fn mode_anchor_page(&self) -> Option<PageIndex> {
+        let page_count = self.page_count();
+        if page_count == 0 {
+            return None;
+        }
+
+        match self.view_mode {
+            ViewMode::Single => self
+                .current_page_single_mode
+                .or_else(|| self.last_visible_pages.first().copied())
+                .or(Some(PageIndex(0))),
+            ViewMode::Spread { cover_separate } => {
+                let spread_idx = self.current_spread_index.unwrap_or_else(|| {
+                    self.last_visible_pages.first().map_or(0, |page| {
+                        Self::spread_index_for_page(page_count, cover_separate, page.0)
+                    })
+                });
+                Some(PageIndex(
+                    Self::spread_pages(page_count, cover_separate, spread_idx).0,
+                ))
+            }
+            ViewMode::Continuous => self.last_visible_pages.first().copied().or(Some(PageIndex(0))),
+        }
+    }
+
+    fn spread_count(page_count: usize, cover_separate: bool) -> usize {
+        if page_count == 0 {
+            0
+        } else if cover_separate {
+            1 + (page_count.saturating_sub(1)).div_ceil(2)
+        } else {
+            page_count.div_ceil(2)
+        }
+    }
+
+    fn spread_pages(page_count: usize, cover_separate: bool, spread_idx: usize) -> (usize, Option<usize>) {
+        if page_count == 0 {
+            return (0, None);
+        }
+
+        if cover_separate {
+            if spread_idx == 0 {
+                return (0, None);
+            }
+            let offset = 1 + (spread_idx - 1) * 2;
+            let left = offset.min(page_count - 1);
+            (
+                left,
+                if left + 1 < page_count {
+                    Some(left + 1)
+                } else {
+                    None
+                },
+            )
+        } else {
+            let offset = (spread_idx * 2).min(page_count - 1);
+            (
+                offset,
+                if offset + 1 < page_count {
+                    Some(offset + 1)
+                } else {
+                    None
+                },
+            )
+        }
+    }
+
+    fn spread_index_for_page(page_count: usize, cover_separate: bool, page_idx: usize) -> usize {
+        if page_count == 0 {
+            0
+        } else {
+            let page_idx = page_idx.min(page_count - 1);
+            if cover_separate {
+                if page_idx == 0 {
+                    0
+                } else {
+                    1 + (page_idx - 1) / 2
+                }
+            } else {
+                page_idx / 2
             }
         }
     }
