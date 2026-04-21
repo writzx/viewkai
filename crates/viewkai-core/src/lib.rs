@@ -11,11 +11,14 @@ pub mod search;
 pub mod text;
 /// Shared coordinate, page, and render value types.
 pub mod types;
+/// Shared viewing-mode data types.
+pub mod view_mode;
 
 pub use error::*;
 pub use search::{SearchMatch, SearchQuery, SearchState};
 pub use text::{CharIndex, CharSpan, GlyphBox, LineSpan, PageText, SelectionRange, WordSpan};
 pub use types::*;
+pub use view_mode::ViewMode;
 
 #[cfg(test)]
 mod tests {

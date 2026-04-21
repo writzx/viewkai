@@ -26,11 +26,14 @@ use crate::error::LoadError;
 use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
+const NO_VISIBLE_PAGES: &[PageIndex] = &[];
+
 use std::{cell::Cell, sync::Arc};
 use viewkai_core::{PageIndex, PageText, PointsRect, SelectionRange};
 use viewkai_engine::{Document, error::EngineError};
 use viewkai_plugins::PluginRegistry;
 
+pub use viewkai_core::ViewMode;
 pub use viewkai_plugins::{
     PluginContext, PointerEvent, SearchPlugin, TextLayerPlugin, ViewerPlugin,
 };
@@ -79,6 +82,7 @@ impl RenderState {
 pub struct Viewer {
     state: ViewerState,
     render: RenderState,
+    view_mode: ViewMode,
     pending_scroll_to_page: Option<usize>,
     plugins: PluginRegistry,
     pending_scroll: Cell<Option<(PageIndex, PointsRect)>>,
@@ -100,6 +104,7 @@ impl Viewer {
         let mut viewer = Self {
             state: ViewerState::Empty,
             render: RenderState::new(),
+            view_mode: ViewMode::Continuous,
             pending_scroll_to_page: None,
             plugins: PluginRegistry::new(vec![
                 Box::new(TextLayerPlugin::new()),
@@ -123,6 +128,17 @@ impl Viewer {
     #[must_use]
     pub fn zoom(&self) -> ZoomState {
         self.render.zoom
+    }
+
+    /// Set the active page-layout mode for subsequent renders.
+    pub fn set_view_mode(&mut self, mode: ViewMode) {
+        self.view_mode = mode;
+    }
+
+    /// Return the currently configured page-layout mode.
+    #[must_use]
+    pub fn view_mode(&self) -> ViewMode {
+        self.view_mode
     }
 
     /// Scroll the viewer to make page `idx` visible.
@@ -293,7 +309,7 @@ impl Viewer {
         let ctx = Self::make_plugin_context(
             document,
             zoom,
-            &[],
+            NO_VISIBLE_PAGES,
             &egui_ctx,
             self.selection_color,
             self.library_shortcuts_enabled,
@@ -311,7 +327,7 @@ impl Viewer {
         let ctx = Self::make_plugin_context(
             document,
             zoom,
-            &[],
+            NO_VISIBLE_PAGES,
             egui_ctx,
             self.selection_color,
             self.library_shortcuts_enabled,
@@ -532,6 +548,7 @@ impl Viewer {
             ViewerState::Loaded { document, pages } => {
                 Self::show_pages(
                     ui,
+                    self.view_mode,
                     document,
                     pages,
                     &mut self.render.cache,
@@ -558,6 +575,43 @@ impl Viewer {
     // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
     #[allow(clippy::too_many_arguments)]
     fn show_pages(
+        ui: &mut egui::Ui,
+        view_mode: ViewMode,
+        document: &Arc<Document>,
+        pages: &[PageState],
+        cache: &mut TextureCache,
+        visibility: &VisibilityTracker,
+        zoom: ZoomState,
+        viewer_pending_scroll: &mut Option<usize>,
+        plugins: &mut PluginRegistry,
+        last_visible_pages: &mut Vec<PageIndex>,
+        selection_color: Color32,
+        library_shortcuts_enabled: bool,
+        pending_scroll: &Cell<Option<(PageIndex, PointsRect)>>,
+    ) {
+        match view_mode {
+            ViewMode::Continuous => Self::show_pages_continuous(
+                ui,
+                document,
+                pages,
+                cache,
+                visibility,
+                zoom,
+                viewer_pending_scroll,
+                plugins,
+                last_visible_pages,
+                selection_color,
+                library_shortcuts_enabled,
+                pending_scroll,
+            ),
+            mode => Self::show_placeholder_pending_phase_c(ui, mode),
+        }
+    }
+
+    // justify: page rendering stays snapshot-stable when the existing render inputs
+    // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
+    #[allow(clippy::too_many_arguments)]
+    fn show_pages_continuous(
         ui: &mut egui::Ui,
         document: &Arc<Document>,
         pages: &[PageState],
@@ -604,9 +658,10 @@ impl Viewer {
                 );
 
                 let scroll_offset = ui.clip_rect().min.y - ui.min_rect().min.y;
-                let vis_set = visibility.compute(
-                    scroll_offset.max(0.0),
-                    viewport_rect.height(),
+                let vis_set = Self::visible_pages_in_viewport(
+                    visibility,
+                    viewport_rect,
+                    scroll_offset,
                     &page_tops,
                     &page_heights,
                 );
@@ -648,6 +703,13 @@ impl Viewer {
             });
     }
 
+    // TEMPORARY: deleted in Plan 03 Phase C.
+    fn show_placeholder_pending_phase_c(ui: &mut egui::Ui, mode: ViewMode) {
+        ui.centered_and_justified(|ui| {
+            ui.label(format!("ViewMode {:?} ships in Plan 03 Phase C", mode));
+        });
+    }
+
     fn compute_page_layout(pages: &[PageState], effective_zoom: f32) -> (Vec<f32>, Vec<f32>) {
         const GAP: f32 = 16.0;
 
@@ -664,6 +726,38 @@ impl Viewer {
             .collect();
 
         (page_tops, page_heights)
+    }
+
+    fn compute_page_viewport_rect(
+        page_idx: usize,
+        effective_zoom: f32,
+        pages: &[PageState],
+        available_width: f32,
+    ) -> Rect {
+        let (page_tops, _) = Self::compute_page_layout(pages, effective_zoom);
+        let page = pages[page_idx];
+        let display_size = Vec2::new(
+            page.size_pt.x * effective_zoom,
+            page.size_pt.y * effective_zoom,
+        );
+        let x_offset = ((available_width - display_size.x) / 2.0).max(0.0);
+
+        Rect::from_min_size(egui::pos2(x_offset, page_tops[page_idx]), display_size)
+    }
+
+    fn visible_pages_in_viewport(
+        visibility: &VisibilityTracker,
+        viewport_rect: Rect,
+        scroll_offset: f32,
+        page_tops: &[f32],
+        page_heights: &[f32],
+    ) -> VisibleSet {
+        visibility.compute(
+            scroll_offset.max(0.0),
+            viewport_rect.height(),
+            page_tops,
+            page_heights,
+        )
     }
 
     fn prioritize_renders(vis_set: &VisibleSet, page_tops: &[f32], center_y: f32) -> Vec<usize> {
@@ -821,14 +915,14 @@ impl Viewer {
                 Some(egui::Align::TOP),
             );
         } else if let Some((page, rect_in_page_pt)) = pending_plugin_scroll.take()
-            && let Some((&top, page_state)) = page_tops.get(page.0).zip(pages.get(page.0))
+            && pages.get(page.0).is_some()
         {
-            let page_width = page_state.size_pt.x * effective_zoom;
-            let x_offset = ((available_width - page_width) / 2.0).max(0.0);
+            let page_rect =
+                Self::compute_page_viewport_rect(page.0, effective_zoom, pages, available_width);
             let target_rect = Rect::from_min_size(
                 egui::pos2(
-                    x_offset + rect_in_page_pt.x * effective_zoom,
-                    top + rect_in_page_pt.y * effective_zoom,
+                    page_rect.min.x + rect_in_page_pt.x * effective_zoom,
+                    page_rect.min.y + rect_in_page_pt.y * effective_zoom,
                 ),
                 Vec2::new(
                     rect_in_page_pt.width.max(1.0) * effective_zoom,
