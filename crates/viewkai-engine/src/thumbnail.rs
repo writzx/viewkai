@@ -15,7 +15,7 @@ use viewkai_core::{PageIndex, PdfPageRotation, RawImage};
 /// # Errors
 ///
 /// Returns an error if the page index is out of bounds or pdfium fails.
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 pub fn render_thumbnail(
     doc: &Document,
     page: PageIndex,

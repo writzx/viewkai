@@ -9,7 +9,7 @@ use viewkai_engine::Document;
 use crate::{PluginContext, ViewerPlugin, sealed};
 
 /// Plugin that renders a document outline sidebar.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct OutlinePlugin {
     visible: bool,
     expanded_nodes: HashSet<OutlineNodeId>,
@@ -146,18 +146,6 @@ impl OutlinePlugin {
                 width: 1.0,
                 height: 1.0,
             },
-        }
-    }
-}
-
-impl Default for OutlinePlugin {
-    fn default() -> Self {
-        Self {
-            visible: false,
-            expanded_nodes: HashSet::new(),
-            last_target_page: None,
-            outline_cache: None,
-            pending_destination: None,
         }
     }
 }

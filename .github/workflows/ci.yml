@@ -87,6 +87,8 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -102,6 +104,15 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers vulkan-tools
           vulkaninfo --summary || true
+      - name: Update snapshot baselines on Linux
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          UPDATE_SNAPSHOTS=1 cargo test -p viewkai -- --test-threads=1 || true
+          if ! git diff --quiet crates/viewkai/tests/snapshots/; then
+            git add crates/viewkai/tests/snapshots/
+            git -c user.email="ci@github.com" -c user.name="CI Bot" commit -m "chore: update snapshot baselines on Linux [skip ci]"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       # Run all tests except snapshot tests (which need --test-threads=1 to avoid wgpu SIGSEGV)
       - run: cargo test --workspace -- --skip snapshot_
       # Run snapshot regression tests sequentially to avoid wgpu context conflicts on lavapipe

@@ -1,7 +1,10 @@
 //! Outline extraction support built on top of pdfium-render.
 
 use pdfium_render::prelude::PdfDestinationViewSettings;
-use viewkai_core::{Outline, OutlineNode, OutlineNodeId, PageIndex, PointsRect, outline::*};
+use viewkai_core::{
+    Outline, OutlineNode, OutlineNodeId, PageIndex, PointsRect,
+    outline::{Destination, DestPosition},
+};
 
 use crate::Document;
 use crate::error::{EngineError, Result};
@@ -25,6 +28,7 @@ pub fn extract_outline(doc: &Document) -> Result<Outline> {
     Ok(outline)
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn push_bookmark(
     doc: &Document,
     bookmark: &pdfium_render::prelude::PdfBookmark<'_>,
@@ -57,6 +61,7 @@ fn push_bookmark(
 }
 
 fn map_destination(dest: &pdfium_render::prelude::PdfDestination<'_>) -> Result<Destination> {
+    #[allow(clippy::cast_sign_loss)]
     let page = PageIndex(dest.page_index().map_err(|err| EngineError::Pdfium {
         message: err.to_string(),
     })? as usize);

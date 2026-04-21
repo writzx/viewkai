@@ -251,7 +251,7 @@ impl ThumbnailPlugin {
     }
 
     fn sync_document(&mut self, document: &Document) {
-        let identity = document as *const Document as usize;
+        let identity = std::ptr::from_ref::<Document>(document) as usize;
         if self.document_identity != Some(identity) {
             self.reset_document_state();
             self.document_identity = Some(identity);

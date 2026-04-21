@@ -397,11 +397,11 @@ impl App {
         self.transition(LoadEvent::Reset);
     }
 
-    fn begin_url_fetch(&mut self, ctx: &egui::Context, url: String) {
+    fn begin_url_fetch(&mut self, ctx: &egui::Context, url: &str) {
         let sink = Arc::new(Mutex::new(None));
         fetch_url_native(
-            &url,
-            Self::document_name_from_url(&url),
+            url,
+            Self::document_name_from_url(url),
             ctx,
             Arc::clone(&sink),
         );
@@ -697,7 +697,7 @@ impl App {
         if submit {
             let url = self.url_dialog.url_buffer.trim().to_owned();
             self.url_dialog.visible = false;
-            self.begin_url_fetch(ctx, url);
+            self.begin_url_fetch(ctx, &url);
             return;
         }
 
@@ -860,11 +860,11 @@ fn fetch_url_native(
     ehttp::fetch(ehttp::Request::get(&url), move |res| {
         *sink.lock().unwrap() = Some(
             res.map(|response| PendingLoad {
-                bytes: response.bytes.to_vec(),
+                bytes: response.bytes.clone(),
                 source_label: "Processing fetched PDF".to_owned(),
                 document_name: document_name.clone(),
             })
-            .map_err(|err| err.to_string()),
+            .map_err(|err| err.clone()),
         );
         ctx.request_repaint();
     });

@@ -6,6 +6,7 @@ use egui_kittest::{Harness, kittest::Queryable};
 use viewkai_plugins::{OutlinePlugin, PluginContext, ViewerPlugin};
 
 #[test]
+#[allow(clippy::items_after_statements)]
 fn outline_plugin_renders_tree() {
     viewkai_engine::init().expect("pdfium init");
     let bytes = include_bytes!("../../../tests/fixtures/bookmarks.pdf").to_vec();
@@ -33,6 +34,7 @@ fn outline_plugin_renders_tree() {
 }
 
 #[test]
+#[allow(clippy::items_after_statements)]
 fn show_toolbar_toggles_outline_panel() {
     let egui_ctx = egui::Context::default();
     let pending_scroll = Cell::new(None);

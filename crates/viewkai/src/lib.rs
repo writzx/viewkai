@@ -917,7 +917,7 @@ impl Viewer {
 
     // justify: page rendering stays snapshot-stable when the existing render inputs
     // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
     fn show_pages_single(
         ui: &mut egui::Ui,
         document: &Arc<Document>,
@@ -1188,7 +1188,11 @@ impl Viewer {
 
     // justify: page rendering stays snapshot-stable when the existing render inputs
     // and plugin-dispatch state are passed explicitly instead of introducing a new struct.
-    #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        clippy::similar_names
+    )]
     fn show_pages_spread(
         ui: &mut egui::Ui,
         document: &Arc<Document>,
@@ -1520,6 +1524,7 @@ impl Viewer {
         to_render
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render_queued_pages(
         ui: &egui::Ui,
         document: &Arc<Document>,
@@ -1651,6 +1656,7 @@ impl Viewer {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn paint_positioned_page(
         ui: &mut egui::Ui,
         cache: &mut TextureCache,
@@ -1844,6 +1850,7 @@ impl Viewer {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn handle_pending_scroll(
         ui: &mut egui::Ui,
         pending_scroll_to_page: &mut Option<usize>,
@@ -2016,6 +2023,7 @@ impl Viewer {
     }
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn page_state_size(page: &PageState) -> PageSize {
     PageSize {
         width_pt: page.size_pt.x,

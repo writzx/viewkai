@@ -142,6 +142,7 @@ fn thumbnail_cache_hit_updates_lru() {
 }
 
 #[test]
+#[allow(clippy::items_after_statements)]
 fn render_panel_click_queues_navigation() {
     pdfium_once();
 

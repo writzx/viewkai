@@ -242,6 +242,7 @@ impl DemoApp {
     }
 
     /// Test-only convenience constructor used by harness-based smoke tests.
+    #[must_use]
     pub fn new_for_testing() -> Self {
         Self {
             viewer: Viewer::new(),
@@ -346,24 +347,24 @@ impl DemoApp {
         }
     }
 
-    fn start_fetch(&mut self, ctx: &egui::Context, url: String) {
+    fn start_fetch(&mut self, ctx: &egui::Context, url: &str) {
         let pending = Arc::new(Mutex::new(None));
         let pending_clone = Arc::clone(&pending);
         let repaint_ctx = ctx.clone();
-        let document_name = Self::document_name_from_url(&url);
+        let document_name = Self::document_name_from_url(url);
 
         self.load_state = DemoLoadState::AcquiringBytes {
             label: format!("Fetching {url}"),
         };
 
-        ehttp::fetch(ehttp::Request::get(&url), move |result| {
+        ehttp::fetch(ehttp::Request::get(url), move |result| {
             let bytes = result
                 .map(|response| PendingLoad {
-                    bytes: response.bytes.to_vec(),
+                    bytes: response.bytes.clone(),
                     source_label: "Processing fetched PDF".to_owned(),
                     document_name: document_name.clone(),
                 })
-                .map_err(|err| err.to_string());
+                .map_err(|err| err.clone());
             *pending_clone.lock().unwrap() = Some(bytes);
             repaint_ctx.request_repaint();
         });
@@ -718,7 +719,7 @@ impl DemoApp {
         if submit {
             let url = self.url_dialog.url_buffer.trim().to_owned();
             self.url_dialog.visible = false;
-            self.start_fetch(ctx, url);
+            self.start_fetch(ctx, &url);
             return;
         }
 

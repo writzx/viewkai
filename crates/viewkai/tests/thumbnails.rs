@@ -23,6 +23,7 @@ fn viewer_thumbnail_accessor_returns_plugin() {
 }
 
 #[test]
+#[allow(clippy::items_after_statements)]
 fn thumbnail_texture_cached_after_first_access() {
     let _guard = test_lock()
         .lock()
