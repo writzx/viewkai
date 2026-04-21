@@ -10,9 +10,10 @@
     </style>
     
     
-  <link rel="modulepreload" href="./viewkai-web-9054ce1fc9deb62b.js" crossorigin="anonymous" integrity="sha384-xTKF9r08B4sG33JMEPr2yHKmADhxdP7b4MBbP2RwOWBxyrwmqwoyVcgvfquSCdcg"><link rel="preload" href="./viewkai-web-9054ce1fc9deb62b_bg.wasm" crossorigin="anonymous" integrity="sha384-z03Qc7r1ItZMqsaCuVC7W1fYddmJ1nDXbs+ofs7FFXVd3mGRV23N5sf8/ryLyHbG" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="./viewkai-web-3866bd9d02fd80e7.js" crossorigin="anonymous" integrity="sha384-GsypAYO9Irv8ulbD/07pHnVHVbAwbEU9lMnbo63WlkDqmkpPM5I9uH7EVlsAExqj"><link rel="preload" href="./viewkai-web-3866bd9d02fd80e7_bg.wasm" crossorigin="anonymous" integrity="sha384-ka6cvBiN92k6ztQ8dp+Hjl+REKyhGBRoFFZltkZO4pAPblQnsDPeXMf08bWKxOud" as="fetch" type="application/wasm"></head>
   <body>
     <!-- Keep this in sync with public/index.html for local web hosting. -->
+    <input type="file" id="viewkai-file-input" accept="application/pdf,.pdf" style="display:none" />
     <script src="pdfium.js"></script>
     <script>
       // Load pdfium's emscripten module as a promise; the Rust wasm module
@@ -38,8 +39,8 @@
     </script>
     
 <script type="module">
-import init, * as bindings from './viewkai-web-9054ce1fc9deb62b.js';
-const wasm = await init({ module_or_path: './viewkai-web-9054ce1fc9deb62b_bg.wasm' });
+import init, * as bindings from './viewkai-web-3866bd9d02fd80e7.js';
+const wasm = await init({ module_or_path: './viewkai-web-3866bd9d02fd80e7_bg.wasm' });
 
 
 window.wasmBindings = bindings;
