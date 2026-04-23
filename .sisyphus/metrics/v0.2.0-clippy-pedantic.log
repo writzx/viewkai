@@ -1,0 +1,159 @@
+    Checking viewkai-core v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-core)
+    Checking rustls-webpki v0.103.13
+    Checking rustls v0.23.38
+    Checking viewkai-engine v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-engine)
+warning: docs for function returning `Result` missing `# Errors` section
+  --> crates/viewkai-engine/src/outline.rs:13:1
+   |
+13 | pub fn extract_outline(doc: &Document) -> Result<Outline> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#missing_errors_doc
+   = note: `-W clippy::missing-errors-doc` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::missing_errors_doc)]`
+
+warning: docs for function returning `Result` missing `# Errors` section
+   --> crates/viewkai-engine/src/lib.rs:305:5
+    |
+305 |     pub fn outline(&self) -> Result<StdArc<Outline>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#missing_errors_doc
+
+warning: `viewkai-engine` (lib test) generated 2 warnings
+warning: `viewkai-engine` (lib) generated 2 warnings (2 duplicates)
+    Checking viewkai-plugins v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-plugins)
+warning: casting `u32` to `f32` may cause a loss of precision (`u32` is 32 bits wide, but `f32`'s mantissa is only 23 bits wide)
+   --> crates/viewkai-plugins/src/thumbnail.rs:170:50
+    |
+170 |                     let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#cast_precision_loss
+    = note: `-W clippy::cast-precision-loss` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::cast_precision_loss)]`
+
+warning: casting `u32` to `f32` may cause a loss of precision (`u32` is 32 bits wide, but `f32`'s mantissa is only 23 bits wide)
+   --> crates/viewkai-plugins/src/thumbnail.rs:236:21
+    |
+236 |             .map_or(self.thumbnail_width as f32 * 1.4, |size| {
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#cast_precision_loss
+
+warning: casting `u32` to `f32` may cause a loss of precision (`u32` is 32 bits wide, but `f32`'s mantissa is only 23 bits wide)
+   --> crates/viewkai-plugins/src/thumbnail.rs:242:18
+    |
+242 |                 (self.thumbnail_width as f32 * aspect).max(1.0)
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#cast_precision_loss
+
+warning: `viewkai-plugins` (lib) generated 3 warnings
+    Checking viewkai v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai)
+warning: `viewkai-plugins` (lib test) generated 3 warnings (3 duplicates)
+warning: redundant closure
+  --> crates/viewkai/tests/text_layer_multipage.rs:12:49
+   |
+12 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: `viewkai` (test "text_layer_multipage") generated 1 warning (run `cargo clippy --fix --test "text_layer_multipage" -p viewkai -- -W clippy::pedantic` to apply 1 suggestion)
+warning: redundant closure
+  --> crates/viewkai/tests/selection_blur.rs:15:49
+   |
+15 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: redundant closure
+  --> crates/viewkai/tests/selection_blur.rs:69:49
+   |
+69 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+
+warning: `viewkai` (test "selection_blur") generated 2 warnings (run `cargo clippy --fix --test "selection_blur" -p viewkai -- -W clippy::pedantic` to apply 2 suggestions)
+warning: redundant closure
+  --> crates/viewkai/tests/find_navigation.rs:66:49
+   |
+66 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: redundant closure
+  --> crates/viewkai/tests/find_navigation.rs:76:49
+   |
+76 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+  --> crates/viewkai/tests/find_navigation.rs:87:49
+   |
+87 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+
+warning: redundant closure
+   --> crates/viewkai/tests/find_navigation.rs:108:49
+    |
+108 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+
+warning: `viewkai` (test "find_navigation") generated 4 warnings (run `cargo clippy --fix --test "find_navigation" -p viewkai -- -W clippy::pedantic` to apply 4 suggestions)
+warning: redundant closure
+  --> crates/viewkai/tests/search_multipage.rs:12:49
+   |
+12 |     let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+   |                                                 ^^^^^^^^^^^^^^^^^^ help: replace the closure with the method itself: `std::sync::PoisonError::into_inner`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#redundant_closure_for_method_calls
+   = note: `-W clippy::redundant-closure-for-method-calls` implied by `-W clippy::pedantic`
+   = help: to override `-W clippy::pedantic` add `#[allow(clippy::redundant_closure_for_method_calls)]`
+
+warning: `viewkai` (test "search_multipage") generated 1 warning (run `cargo clippy --fix --test "search_multipage" -p viewkai -- -W clippy::pedantic` to apply 1 suggestion)
+    Checking ureq v2.12.1
+    Checking ehttp v0.5.0
+    Checking viewkai-app v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-app)
+    Checking viewkai-web v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-web)
+warning: consider adding a `;` to the last statement for consistent formatting
+   --> crates/viewkai-web/src/lib.rs:824:29
+    |
+824 | ...                   self.viewer.outline_mut().render_panel(ui, doc.as_deref())
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: add a `;` here: `self.viewer.outline_mut().render_panel(ui, doc.as_deref());`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#semicolon_if_nothing_returned
+    = note: `-W clippy::semicolon-if-nothing-returned` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::semicolon_if_nothing_returned)]`
+
+warning: `viewkai-web` (lib) generated 1 warning (1 duplicate)
+warning: `viewkai-web` (lib test) generated 1 warning (run `cargo clippy --fix --lib -p viewkai-web --tests -- -W clippy::pedantic` to apply 1 suggestion)
+warning: consider adding a `;` to the last statement for consistent formatting
+   --> crates/viewkai-app/src/lib.rs:804:29
+    |
+804 | ...                   self.viewer.outline_mut().render_panel(ui, doc.as_deref())
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: add a `;` here: `self.viewer.outline_mut().render_panel(ui, doc.as_deref());`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#semicolon_if_nothing_returned
+    = note: `-W clippy::semicolon-if-nothing-returned` implied by `-W clippy::pedantic`
+    = help: to override `-W clippy::pedantic` add `#[allow(clippy::semicolon_if_nothing_returned)]`
+
+warning: `viewkai-app` (lib test) generated 1 warning (run `cargo clippy --fix --lib -p viewkai-app --tests -- -W clippy::pedantic` to apply 1 suggestion)
+warning: `viewkai-app` (lib) generated 1 warning (1 duplicate)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.95s

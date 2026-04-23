@@ -1,0 +1,318 @@
+   Compiling viewkai-engine v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-engine)
+   Compiling rustls-webpki v0.103.13
+   Compiling viewkai-plugins v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-plugins)
+   Compiling viewkai v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai)
+   Compiling rustls v0.23.38
+   Compiling ureq v2.12.1
+   Compiling ehttp v0.5.0
+   Compiling viewkai-app v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-app)
+   Compiling viewkai-web v0.2.0 (/home/opencode/projects/valeria/viewkai/crates/viewkai-web)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.00s
+     Running unittests src/lib.rs (target/debug/deps/viewkai-498cd660bdc60e82)
+cache::tests::byte_accounting_correct: test
+cache::tests::cache_key_equality: test
+cache::tests::cap_enforcement_strict: test
+cache::tests::evict_lru_order: test
+viewport::tests::all_pages_fit_in_viewport: test
+viewport::tests::scroll_near_end_no_prefetch_below: test
+viewport::tests::scroll_near_start_no_prefetch_above: test
+viewport::tests::single_visible_page_mid_doc: test
+viewport::tests::variable_heights: test
+zoom::tests::discrete_zoom_returns_value: test
+zoom::tests::dpi_bucket_mapping: test
+zoom::tests::fit_page_uses_smaller_scale: test
+zoom::tests::fit_width_scales_to_viewport: test
+
+13 tests, 0 benchmarks
+     Running tests/cache_invariants.rs (target/debug/deps/cache_invariants-664691c16a1974d2)
+evict_lru_removes_exactly_one_entry: test
+evict_page_removes_all_zoom_buckets_for_page: test
+insert_cannot_exceed_budget: test
+
+3 tests, 0 benchmarks
+     Running tests/coord_rotation.rs (target/debug/deps/coord_rotation-1a07a0b5b8d471fc)
+inverse_rotate_point_none_is_identity: test
+inverse_rotate_point_r180_maps_to_pdf_coords: test
+inverse_rotate_point_r270_maps_to_pdf_coords: test
+inverse_rotate_point_r90_maps_to_pdf_coords: test
+
+4 tests, 0 benchmarks
+     Running tests/find_navigation.rs (target/debug/deps/find_navigation-1382114b96c96758)
+next_match_advances_index: test
+next_match_wraps_at_end: test
+prev_match_decrements_index: test
+prev_match_wraps_at_start: test
+
+4 tests, 0 benchmarks
+     Running tests/hello.rs (target/debug/deps/hello-d5f935bae4c04c58)
+viewer_loads_hello_pdf: test
+
+1 test, 0 benchmarks
+     Running tests/memory_budget.rs (target/debug/deps/memory_budget-5871fad65658e04e)
+memory_budget_acceptance: test
+
+1 test, 0 benchmarks
+     Running tests/outline.rs (target/debug/deps/outline-d843e8a91462a984)
+goto_destination_sets_pending_destination: test
+outline_document_returns_loaded_outline: test
+viewer_outline_accessor_returns_plugin: test
+
+3 tests, 0 benchmarks
+     Running tests/outline_snapshot.rs (target/debug/deps/outline_snapshot-8797ac23310bae0b)
+snapshot_outline_bookmarks_rendered: test
+
+1 test, 0 benchmarks
+     Running tests/plugin_access.rs (target/debug/deps/plugin_access-e055422e87d79dac)
+typed_accessors_return_correct_ids: test
+
+1 test, 0 benchmarks
+     Running tests/rotation.rs (target/debug/deps/rotation-8a752824e7ba4e48)
+reset_rotations_clears: test
+rotate_all_applies_to_every_page: test
+rotate_page_cycle: test
+
+3 tests, 0 benchmarks
+     Running tests/rotation_search.rs (target/debug/deps/rotation_search-81800df70f645f95)
+search_highlights_on_180_rotated_page: test
+
+1 test, 0 benchmarks
+     Running tests/rotation_selection.rs (target/debug/deps/rotation_selection-bef39180aca15ecb)
+select_text_on_90_rotated_page: test
+
+1 test, 0 benchmarks
+     Running tests/search.rs (target/debug/deps/search-9aaa216784e32979)
+viewer_current_match_returns_none_when_no_state: test
+viewer_search_api_shim_delegates: test
+
+2 tests, 0 benchmarks
+     Running tests/search_multipage.rs (target/debug/deps/search_multipage-313f78a95aefe328)
+search_on_multipage_pdf_does_not_panic: test
+
+1 test, 0 benchmarks
+     Running tests/search_snapshot.rs (target/debug/deps/search_snapshot-865847806853dbb9)
+snapshot_search_hello_highlighted: test
+
+1 test, 0 benchmarks
+     Running tests/selection.rs (target/debug/deps/selection-de04041bf918f83b)
+esc_deselects: test
+library_shortcuts_opt_out: test
+viewer_select_all_and_copy: test
+
+3 tests, 0 benchmarks
+     Running tests/selection_blur.rs (target/debug/deps/selection_blur-e9d24f2be6049142)
+clicking_inside_page_outside_text_clears_selection: test
+select_all_then_deselect_works: test
+
+2 tests, 0 benchmarks
+     Running tests/selection_snapshot.rs (target/debug/deps/selection_snapshot-c798f194edfeda2c)
+snapshot_selection_highlight_hello: test
+snapshot_selection_on_rotated_page: test
+
+2 tests, 0 benchmarks
+     Running tests/snapshot_regression.rs (target/debug/deps/snapshot_regression-eeb0e600494fdddf)
+snapshot_empty_state: test
+snapshot_error_state: test
+snapshot_hello_custom_2x: test
+snapshot_hello_fitwidth: test
+snapshot_hello_loaded: test
+snapshot_rotation_180_hello: test
+snapshot_rotation_270_hello: test
+snapshot_rotation_90_hello: test
+snapshot_single_mode_hello: test
+snapshot_spread_mode_cover_separate: test
+
+10 tests, 0 benchmarks
+     Running tests/states.rs (target/debug/deps/states-428981fb227059e2)
+viewer_clear_resets_to_empty: test
+viewer_empty_state_renders_placeholder: test
+viewer_error_state_surfaces_and_retries: test
+viewer_loaded_state_renders_pages: test
+viewer_scroll_to_page_advances_layout: test
+viewer_zoom_setter_roundtrips: test
+
+6 tests, 0 benchmarks
+     Running tests/text_layer_debug.rs (target/debug/deps/text_layer_debug-6146ab4eb474a061)
+snapshot_text_layer_debug_hello: test
+
+1 test, 0 benchmarks
+     Running tests/text_layer_multipage.rs (target/debug/deps/text_layer_multipage-7f9cb992b51b06ea)
+snapshot_text_layer_overlay_page_two: test
+
+1 test, 0 benchmarks
+     Running tests/text_layer_toolbar.rs (target/debug/deps/text_layer_toolbar-f72b3d660552d9d3)
+checkbox_toggles_plugin_state: test
+show_does_not_invoke_toolbars: test
+show_plugin_toolbars_renders_checkbox: test
+
+3 tests, 0 benchmarks
+     Running tests/thumbnails.rs (target/debug/deps/thumbnails-2087f9a64225a877)
+thumbnail_click_scrolls_to_page: test
+thumbnail_texture_cached_after_first_access: test
+thumbnails_500page_stress_stays_within_budget: test
+viewer_thumbnail_accessor_returns_plugin: test
+
+4 tests, 0 benchmarks
+     Running tests/view_mode.rs (target/debug/deps/view_mode-342c9604ebbaf1c1)
+viewer_default_view_mode_is_continuous: test
+viewer_set_view_mode_back_to_continuous: test
+viewer_set_view_mode_single: test
+viewer_set_view_mode_spread: test
+viewer_switching_to_continuous_keeps_single_anchor_page: test
+viewer_switching_to_continuous_keeps_spread_anchor_page: test
+
+6 tests, 0 benchmarks
+     Running tests/view_modes.rs (target/debug/deps/view_modes-42e7bf109630f6e3)
+single_mode_pgdn_advances: test
+single_mode_wraps_at_last: test
+single_mode_zoomed_page_stays_reachable: test
+spread_mode_cover_separate_false: test
+spread_mode_cover_separate_true: test
+spread_mode_scroll_to_page_lands_on_spread: test
+spread_mode_zoomed_pages_stay_reachable: test
+
+7 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_app-5c0a35fbe0d99d26)
+0 tests, 0 benchmarks
+     Running unittests src/main.rs (target/debug/deps/viewkai_app-459816f79761cee9)
+0 tests, 0 benchmarks
+     Running tests/menu.rs (target/debug/deps/menu-31706929b22d51db)
+file_close_clears_viewer: test
+file_open_url_opens_modal: test
+help_about_dialog_opens: test
+view_debug_toggles_text_layer: test
+view_menu_exposes_mode_radio: test
+
+5 tests, 0 benchmarks
+     Running tests/outline_sidebar.rs (target/debug/deps/outline_sidebar-40ecaef6c13d966e)
+ctrl_shift_o_toggles_outline_panel: test
+
+1 test, 0 benchmarks
+     Running tests/shortcuts.rs (target/debug/deps/shortcuts-54bc9431d8661959)
+demo_harness_helpers_load_expected_fixtures: test
+demo_load_state_failed_dismiss_returns_to_idle: test
+demo_load_state_idle_to_loaded: test
+shortcut_ctrl_0_resets_zoom: test
+shortcut_ctrl_1_sets_fitwidth: test
+shortcut_ctrl_2_sets_fitpage: test
+shortcut_ctrl_g_focuses_page_input_and_enter_preserves_loaded_doc: test
+shortcut_ctrl_plus_minus_steps_zoom: test
+
+8 tests, 0 benchmarks
+     Running tests/thumbnails_sidebar.rs (target/debug/deps/thumbnails_sidebar-2f45d707f4a7b2dd)
+ctrl_shift_t_toggles_thumbnails: test
+
+1 test, 0 benchmarks
+     Running tests/view_mode_menu.rs (target/debug/deps/view_mode_menu-47018a3df8d4de5e)
+view_menu_single_radio_sets_mode: test
+
+1 test, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_core-5f0d577e46e111e7)
+tests::serde_roundtrip: test
+
+1 test, 0 benchmarks
+     Running tests/view_mode.rs (target/debug/deps/view_mode-637611dcb9feee7e)
+view_mode_default_is_continuous: test
+view_mode_serde_continuous: test
+view_mode_serde_spread_false: test
+view_mode_serde_spread_true: test
+
+4 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_engine-640271c9f2c79948)
+0 tests, 0 benchmarks
+     Running tests/cached_render.rs (target/debug/deps/cached_render-77de6640488a1aa4)
+render_page_out_of_bounds_returns_typed_error: test
+render_same_page_twice_succeeds: test
+
+2 tests, 0 benchmarks
+     Running tests/hello_pdf.rs (target/debug/deps/hello_pdf-7e8b8682beae5ca8)
+open_hello_pdf: test
+
+1 test, 0 benchmarks
+     Running tests/outline.rs (target/debug/deps/outline-ecf042020cbf6cc6)
+empty_pdf_has_no_outline: test
+fixture_pdf_with_bookmarks_extracts_tree: test
+outline_is_cached: test
+
+3 tests, 0 benchmarks
+     Running tests/search.rs (target/debug/deps/search-06bcf0981f0fa690)
+search_empty_term_returns_empty: test
+search_hello_pdf_returns_matches: test
+search_no_matches_returns_empty_vec: test
+
+3 tests, 0 benchmarks
+     Running tests/text_extraction.rs (target/debug/deps/text_extraction-425cfb0efcd3193d)
+glyph_coord_transform_y_flip: test
+hello_pdf_has_one_word: test
+text_cache_reuses_arc: test
+
+3 tests, 0 benchmarks
+     Running tests/thumbnail.rs (target/debug/deps/thumbnail-57571f79dbf95bd1)
+render_hello_thumbnail_dimensions: test
+
+1 test, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_plugins-98b10c62e8ae9221)
+search::tests::next_match_wraps_around: test
+search::tests::open_close_toggles_state: test
+search::tests::prev_match_wraps_around: test
+text_layer::tests::char_at_pos_hits_glyph_pure: test
+text_layer::tests::char_at_pos_misses_returns_none: test
+text_layer::tests::command_mousedown_on_hit_extends_existing_selection: test
+text_layer::tests::debug_toggle_roundtrips: test
+text_layer::tests::double_click_selects_word_pure: test
+text_layer::tests::mousedown_outside_page_clears_but_does_not_consume: test
+text_layer::tests::mousedown_outside_text_inside_page_clears_and_consumes: test
+text_layer::tests::selection_normalize_cross_page: test
+text_layer::tests::selection_normalize_forward: test
+
+12 tests, 0 benchmarks
+     Running tests/outline_plugin.rs (target/debug/deps/outline_plugin-5b5e7c969f000ab5)
+goto_destination_emits_expected_target: test
+outline_plugin_renders_tree: test
+show_toolbar_toggles_outline_panel: test
+
+3 tests, 0 benchmarks
+     Running tests/registry.rs (target/debug/deps/registry-17d588e40e702497)
+registry_exposes_builtins: test
+registry_is_ordered: test
+
+2 tests, 0 benchmarks
+     Running tests/thumbnail_plugin.rs (target/debug/deps/thumbnail_plugin-d6048f30d8b3e1ae)
+render_panel_click_queues_navigation: test
+thumbnail_cache_evicts_to_budget: test
+thumbnail_cache_hit_updates_lru: test
+
+3 tests, 0 benchmarks
+     Running tests/trait_seal.rs (target/debug/deps/trait_seal-1f5ca97600f3da99)
+outline_plugin_has_correct_id: test
+search_plugin_has_correct_id: test
+text_layer_plugin_has_correct_id: test
+
+3 tests, 0 benchmarks
+     Running unittests src/lib.rs (target/debug/deps/viewkai_web-c8594ec208920784)
+0 tests, 0 benchmarks
+     Running unittests src/main.rs (target/debug/deps/viewkai_web-d279e57cfec6db37)
+0 tests, 0 benchmarks
+     Running tests/menu_smoke.rs (target/debug/deps/menu_smoke-8cc12bf4dd451dab)
+web_file_close_clears_viewer: test
+web_menu_bar_has_three_menus: test
+web_url_input_no_longer_in_top_bar: test
+web_view_debug_toggles_text_layer: test
+
+4 tests, 0 benchmarks
+   Doc-tests viewkai
+crates/viewkai/src/lib.rs - (line 5): test
+
+1 test, 0 benchmarks
+all doctests ran in 0.34s; merged doctests compilation took 0.33s
+   Doc-tests viewkai_app
+0 tests, 0 benchmarks
+   Doc-tests viewkai_core
+0 tests, 0 benchmarks
+   Doc-tests viewkai_engine
+0 tests, 0 benchmarks
+   Doc-tests viewkai_plugins
+crates/viewkai-plugins/src/plugin.rs - plugin::ViewerPlugin (line 122): test
+
+1 test, 0 benchmarks
+   Doc-tests viewkai_web
+0 tests, 0 benchmarks
