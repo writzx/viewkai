@@ -8,11 +8,6 @@ output_path = "tests/snapshots"
 threshold = 2.0
 failed_pixel_count_threshold = 0
 
-# CI source of truth. Keep tight; baselines are authored via CI.
-[linux]
-threshold = 0.6
-failed_pixel_count_threshold = 0
-
 # macOS dev override — lenient because font hinting / Metal driver variance
 # is expected vs. the Linux-generated baselines.
 [mac]
