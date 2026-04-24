@@ -427,8 +427,8 @@ impl ViewerPlugin for TextLayerPlugin {
         }
     }
 
-    fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
-        ui.checkbox(&mut self.debug, "Show text layer");
+    fn show_toolbar(&mut self, _ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
+        // justify: Plan 03.25 D-10
     }
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {

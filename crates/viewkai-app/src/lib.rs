@@ -44,6 +44,7 @@ pub enum LoadState {
 pub struct App {
     viewer: Viewer,
     load_state: LoadState,
+    debug_panel_visible: bool,
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
@@ -182,6 +183,7 @@ impl App {
         Self {
             viewer: Viewer::new(),
             load_state: LoadState::Idle,
+            debug_panel_visible: false,
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
@@ -238,7 +240,10 @@ impl App {
     pub fn load_bytes_sync(&mut self, bytes: Vec<u8>) -> Result<(), String> {
         self.load_bytes(&bytes, None);
         match &self.load_state {
-            LoadState::Loaded => Ok(()),
+            LoadState::Loaded => {
+                self.debug_panel_visible = true;
+                Ok(())
+            }
             LoadState::Failed { msg } => Err(msg.clone()),
             _ => Err("unexpected state after load".to_owned()),
         }
@@ -579,20 +584,8 @@ impl App {
                 ui.menu_button("View Mode", |ui| {
                     self.view_mode_menu_ui(ui);
                 });
-                ui.menu_button("Sidebar", |ui| {
-                    let mut show_outline = self.viewer.outline().visible();
-                    if ui.checkbox(&mut show_outline, "Show Outline").clicked() {
-                        self.toggle_outline_visible(show_outline);
-                    }
-
-                    let mut show_thumbnails = self.viewer.thumbnails().visible();
-                    if ui
-                        .checkbox(&mut show_thumbnails, "Show Thumbnails")
-                        .clicked()
-                    {
-                        self.toggle_thumbnails_visible(show_thumbnails);
-                    }
-                });
+                ui.separator();
+                ui.checkbox(&mut self.debug_panel_visible, "Debug View");
                 ui.menu_button("Rotation", |ui| {
                     if ui.button("Rotate Left (Ctrl+Shift+L)").clicked() {
                         self.viewer.rotate_all(RotationDelta::CounterClockwise);
@@ -605,12 +598,6 @@ impl App {
                     if ui.button("Reset Rotation").clicked() {
                         self.viewer.reset_rotations();
                         ui.close();
-                    }
-                });
-                ui.menu_button("Debug", |ui| {
-                    let mut debug = self.viewer.text_layer_debug();
-                    if ui.checkbox(&mut debug, "Show Text Layer").clicked() {
-                        self.viewer.set_text_layer_debug(debug);
                     }
                 });
             });
@@ -727,6 +714,16 @@ impl eframe::App for App {
                 ui.label("Mode:");
                 self.view_mode_selector_ui(ui);
                 ui.separator();
+                ui.data_mut(|data| {
+                    data.insert_temp(
+                        egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"),
+                        true,
+                    );
+                    data.insert_temp(
+                        egui::Id::new("viewkai.hide_text_layer_toolbar_toggle"),
+                        true,
+                    );
+                });
                 self.viewer.show_plugin_toolbars(ui);
             });
         });
@@ -751,19 +748,29 @@ impl eframe::App for App {
             });
         });
 
-        egui::Panel::bottom("app_debug")
-            .resizable(true)
-            .show_inside(ui, |ui| {
-                egui::CollapsingHeader::new("Debug")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        if let Some(info) = &self.debug_info {
-                            ui.label(info);
-                        } else {
-                            ui.label("No document loaded");
-                        }
-                    });
-            });
+        if self.debug_panel_visible {
+            egui::Panel::bottom("app_debug")
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                    egui::CollapsingHeader::new("Debug")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            if let Some(info) = &self.debug_info {
+                                ui.label(info);
+                            } else {
+                                ui.label("No document loaded");
+                            }
+                            ui.separator();
+                            let mut text_layer_debug = self.viewer.text_layer_debug();
+                            if ui
+                                .checkbox(&mut text_layer_debug, "Show text layer")
+                                .clicked()
+                            {
+                                self.viewer.set_text_layer_debug(text_layer_debug);
+                            }
+                        });
+                });
+        }
 
         if let Some(active_tab) = self.active_sidebar_tab() {
             egui::Panel::left("viewkai.sidebar")

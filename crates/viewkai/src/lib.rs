@@ -27,6 +27,7 @@ use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 const NO_VISIBLE_PAGES: &[PageIndex] = &[];
+const HIDE_TEXT_LAYER_TOOLBAR_TOGGLE_ID: &str = "viewkai.hide_text_layer_toolbar_toggle";
 
 use std::{cell::Cell, collections::HashMap, sync::Arc};
 use viewkai_core::{
@@ -580,31 +581,51 @@ impl Viewer {
     /// Call this inside a panel or toolbar area of your choice. [`Viewer::show`]
     /// does **not** call this — toolbar placement is a consumer UX decision.
     pub fn show_plugin_toolbars(&mut self, ui: &mut egui::Ui) {
+        let hide_text_layer_toolbar_toggle = ui
+            .data(|data| data.get_temp::<bool>(egui::Id::new(HIDE_TEXT_LAYER_TOOLBAR_TOGGLE_ID)))
+            .unwrap_or(false);
         let document_handle = self.current_document_handle();
         let document = document_handle.as_deref();
         let zoom = self.current_context_zoom();
-        let visible_pages = self.last_visible_pages.as_slice();
+        let visible_pages = self.last_visible_pages.clone();
         let selection_color = self.selection_color;
         let library_shortcuts_enabled = self.library_shortcuts_enabled;
         let pending_scroll = &self.pending_scroll;
         let egui_ctx = ui.ctx().clone();
-        let mut ctx = Self::make_plugin_context(
-            document,
-            zoom,
-            visible_pages,
-            &egui_ctx,
-            selection_color,
-            library_shortcuts_enabled,
-            &self.page_rotations,
-            None,
-            pending_scroll,
-        );
+        let (next_text_layer_debug, repaint_requested) = {
+            let mut ctx = Self::make_plugin_context(
+                document,
+                zoom,
+                visible_pages.as_slice(),
+                &egui_ctx,
+                selection_color,
+                library_shortcuts_enabled,
+                &self.page_rotations,
+                None,
+                pending_scroll,
+            );
 
-        for plugin in &mut self.plugins {
-            plugin.show_toolbar(ui, &mut ctx);
+            for plugin in &mut self.plugins {
+                plugin.show_toolbar(ui, &mut ctx);
+            }
+
+            let next_text_layer_debug = if hide_text_layer_toolbar_toggle {
+                None
+            } else {
+                let mut text_layer_debug = self.text_layer_debug();
+                ui.checkbox(&mut text_layer_debug, "Show text layer")
+                    .clicked()
+                    .then_some(text_layer_debug)
+            };
+
+            (next_text_layer_debug, ctx.repaint_requested())
+        };
+
+        if let Some(text_layer_debug) = next_text_layer_debug {
+            self.set_text_layer_debug(text_layer_debug);
         }
 
-        if ctx.repaint_requested() {
+        if repaint_requested {
             egui_ctx.request_repaint();
         }
     }
