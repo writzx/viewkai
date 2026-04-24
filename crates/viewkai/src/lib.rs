@@ -27,7 +27,6 @@ use crate::viewport::{VisibilityTracker, VisibleSet};
 use crate::zoom::ZoomState;
 use egui::{Color32, Rect, Sense, TextureOptions, Vec2};
 const NO_VISIBLE_PAGES: &[PageIndex] = &[];
-const HIDE_TEXT_LAYER_TOOLBAR_TOGGLE_ID: &str = "viewkai.hide_text_layer_toolbar_toggle";
 
 use std::{cell::Cell, collections::HashMap, sync::Arc};
 use viewkai_core::{
@@ -75,7 +74,7 @@ impl RenderState {
     fn new() -> Self {
         Self {
             cache: TextureCache::default_budget(),
-            visibility: VisibilityTracker::new(3),
+            visibility: VisibilityTracker::new(2),
             zoom: ZoomState::default(),
         }
     }
@@ -581,51 +580,31 @@ impl Viewer {
     /// Call this inside a panel or toolbar area of your choice. [`Viewer::show`]
     /// does **not** call this — toolbar placement is a consumer UX decision.
     pub fn show_plugin_toolbars(&mut self, ui: &mut egui::Ui) {
-        let hide_text_layer_toolbar_toggle = ui
-            .data(|data| data.get_temp::<bool>(egui::Id::new(HIDE_TEXT_LAYER_TOOLBAR_TOGGLE_ID)))
-            .unwrap_or(false);
         let document_handle = self.current_document_handle();
         let document = document_handle.as_deref();
         let zoom = self.current_context_zoom();
-        let visible_pages = self.last_visible_pages.clone();
+        let visible_pages = self.last_visible_pages.as_slice();
         let selection_color = self.selection_color;
         let library_shortcuts_enabled = self.library_shortcuts_enabled;
         let pending_scroll = &self.pending_scroll;
         let egui_ctx = ui.ctx().clone();
-        let (next_text_layer_debug, repaint_requested) = {
-            let mut ctx = Self::make_plugin_context(
-                document,
-                zoom,
-                visible_pages.as_slice(),
-                &egui_ctx,
-                selection_color,
-                library_shortcuts_enabled,
-                &self.page_rotations,
-                None,
-                pending_scroll,
-            );
+        let mut ctx = Self::make_plugin_context(
+            document,
+            zoom,
+            visible_pages,
+            &egui_ctx,
+            selection_color,
+            library_shortcuts_enabled,
+            &self.page_rotations,
+            None,
+            pending_scroll,
+        );
 
-            for plugin in &mut self.plugins {
-                plugin.show_toolbar(ui, &mut ctx);
-            }
-
-            let next_text_layer_debug = if hide_text_layer_toolbar_toggle {
-                None
-            } else {
-                let mut text_layer_debug = self.text_layer_debug();
-                ui.checkbox(&mut text_layer_debug, "Show text layer")
-                    .clicked()
-                    .then_some(text_layer_debug)
-            };
-
-            (next_text_layer_debug, ctx.repaint_requested())
-        };
-
-        if let Some(text_layer_debug) = next_text_layer_debug {
-            self.set_text_layer_debug(text_layer_debug);
+        for plugin in &mut self.plugins {
+            plugin.show_toolbar(ui, &mut ctx);
         }
 
-        if repaint_requested {
+        if ctx.repaint_requested() {
             egui_ctx.request_repaint();
         }
     }
@@ -1013,10 +992,7 @@ impl Viewer {
                     rotated_size.width_pt,
                     rotated_size.height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
-                    effective_zoom,
-                    ui.ctx().pixels_per_point(),
-                );
+                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
                 let display_size = Vec2::new(
@@ -1137,10 +1113,7 @@ impl Viewer {
                     1.0
                 };
 
-                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
-                    effective_zoom,
-                    ui.ctx().pixels_per_point(),
-                );
+                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
 
                 let (page_tops, page_heights) =
@@ -1313,10 +1286,7 @@ impl Viewer {
                     spread_width_pt,
                     spread_height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
-                    effective_zoom,
-                    ui.ctx().pixels_per_point(),
-                );
+                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
 
@@ -1565,9 +1535,6 @@ impl Viewer {
         now: f64,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
     ) {
-        // TODO(plan-04): synchronous in-frame rasterization remains the dominant
-        // scroll hitch source; Phase D only widens prefetch instead of adding an
-        // async render queue or layout memoization here.
         for &idx in to_render {
             let page_index = PageIndex(idx);
             let rotation = page_rotations.get(&page_index).copied().unwrap_or_default();
@@ -1913,17 +1880,13 @@ impl Viewer {
             );
             let page_size = page_state_size(&pages[page.0]);
             let rotation = page_rotations.get(&page).copied().unwrap_or_default();
-            let target_rect = if rect_in_page_pt.width <= 1.0 && rect_in_page_pt.height <= 1.0 {
-                page_rect
-            } else {
-                Self::rect_in_page(
-                    page_rect,
-                    rect_in_page_pt,
-                    effective_zoom,
-                    rotation,
-                    page_size,
-                )
-            };
+            let target_rect = Self::rect_in_page(
+                page_rect,
+                rect_in_page_pt,
+                effective_zoom,
+                rotation,
+                page_size,
+            );
             ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
         }
     }

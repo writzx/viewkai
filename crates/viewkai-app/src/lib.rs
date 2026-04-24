@@ -44,7 +44,6 @@ pub enum LoadState {
 pub struct App {
     viewer: Viewer,
     load_state: LoadState,
-    debug_panel_visible: bool,
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
@@ -183,7 +182,6 @@ impl App {
         Self {
             viewer: Viewer::new(),
             load_state: LoadState::Idle,
-            debug_panel_visible: false,
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
@@ -240,10 +238,7 @@ impl App {
     pub fn load_bytes_sync(&mut self, bytes: Vec<u8>) -> Result<(), String> {
         self.load_bytes(&bytes, None);
         match &self.load_state {
-            LoadState::Loaded => {
-                self.debug_panel_visible = true;
-                Ok(())
-            }
+            LoadState::Loaded => Ok(()),
             LoadState::Failed { msg } => Err(msg.clone()),
             _ => Err("unexpected state after load".to_owned()),
         }
@@ -541,44 +536,12 @@ impl App {
     }
 
     fn view_mode_selector_ui(&mut self, ui: &mut egui::Ui) {
-        egui::ComboBox::from_id_salt("view_mode_combo")
-            .selected_text(Self::view_mode_label(self.viewer.view_mode()))
-            .show_ui(ui, |ui| {
-                for (label, mode) in VIEW_MODE_OPTIONS {
-                    if ui
-                        .selectable_label(self.viewer.view_mode() == mode, label)
-                        .clicked()
-                    {
-                        self.viewer.set_view_mode(mode);
-                    }
-                }
-            });
-
+        let mut selected = self.viewer.view_mode();
         for (label, mode) in VIEW_MODE_OPTIONS {
-            if ui
-                .selectable_label(
-                    false,
-                    egui::RichText::new(label)
-                        .size(0.1)
-                        .color(egui::Color32::TRANSPARENT),
-                )
-                .clicked()
-            {
-                self.viewer.set_view_mode(mode);
-            }
+            ui.radio_value(&mut selected, mode, label);
         }
-    }
-
-    fn view_mode_label(mode: ViewMode) -> &'static str {
-        match mode {
-            ViewMode::Single => "Single Page",
-            ViewMode::Continuous => "Continuous",
-            ViewMode::Spread {
-                cover_separate: true,
-            } => "Spread (Cover Alone)",
-            ViewMode::Spread {
-                cover_separate: false,
-            } => "Spread (All Pairs)",
+        if selected != self.viewer.view_mode() {
+            self.viewer.set_view_mode(selected);
         }
     }
 
@@ -616,8 +579,20 @@ impl App {
                 ui.menu_button("View Mode", |ui| {
                     self.view_mode_menu_ui(ui);
                 });
-                ui.separator();
-                ui.checkbox(&mut self.debug_panel_visible, "Debug View");
+                ui.menu_button("Sidebar", |ui| {
+                    let mut show_outline = self.viewer.outline().visible();
+                    if ui.checkbox(&mut show_outline, "Show Outline").clicked() {
+                        self.toggle_outline_visible(show_outline);
+                    }
+
+                    let mut show_thumbnails = self.viewer.thumbnails().visible();
+                    if ui
+                        .checkbox(&mut show_thumbnails, "Show Thumbnails")
+                        .clicked()
+                    {
+                        self.toggle_thumbnails_visible(show_thumbnails);
+                    }
+                });
                 ui.menu_button("Rotation", |ui| {
                     if ui.button("Rotate Left (Ctrl+Shift+L)").clicked() {
                         self.viewer.rotate_all(RotationDelta::CounterClockwise);
@@ -630,6 +605,12 @@ impl App {
                     if ui.button("Reset Rotation").clicked() {
                         self.viewer.reset_rotations();
                         ui.close();
+                    }
+                });
+                ui.menu_button("Debug", |ui| {
+                    let mut debug = self.viewer.text_layer_debug();
+                    if ui.checkbox(&mut debug, "Show Text Layer").clicked() {
+                        self.viewer.set_text_layer_debug(debug);
                     }
                 });
             });
@@ -746,30 +727,13 @@ impl eframe::App for App {
                 ui.label("Mode:");
                 self.view_mode_selector_ui(ui);
                 ui.separator();
-                ui.data_mut(|data| {
-                    data.insert_temp(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"), true);
-                    data.insert_temp(
-                        egui::Id::new("viewkai.hide_text_layer_toolbar_toggle"),
-                        true,
-                    );
-                });
                 self.viewer.show_plugin_toolbars(ui);
             });
         });
 
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                let current_page = self.viewer.visible_pages().first().map_or(0, |page| page.0);
-                let at_first_page = current_page == 0;
-                let at_last_page = self.total_pages == 0 || current_page + 1 >= self.total_pages;
-
                 ui.label("Page:");
-                if ui
-                    .add_enabled(!at_first_page, egui::Button::new("<"))
-                    .clicked()
-                {
-                    self.viewer.scroll_to_page(current_page.saturating_sub(1));
-                }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
                         .desired_width(50.0)
@@ -779,20 +743,6 @@ impl eframe::App for App {
                     response.request_focus();
                     self.page_input_focused = false;
                 }
-                let page_input_has_focus = ui.memory(|memory| memory.has_focus(response.id));
-                if !page_input_has_focus {
-                    self.page_input = if self.total_pages > 0 {
-                        (current_page + 1).to_string()
-                    } else {
-                        String::new()
-                    };
-                }
-                if ui
-                    .add_enabled(!at_last_page, egui::Button::new(">"))
-                    .clicked()
-                {
-                    self.viewer.scroll_to_page(current_page.saturating_add(1));
-                }
                 ui.label(format!("of {}", self.total_pages));
 
                 if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
@@ -801,29 +751,19 @@ impl eframe::App for App {
             });
         });
 
-        if self.debug_panel_visible {
-            egui::Panel::bottom("app_debug")
-                .resizable(true)
-                .show_inside(ui, |ui| {
-                    egui::CollapsingHeader::new("Debug")
-                        .default_open(true)
-                        .show(ui, |ui| {
-                            if let Some(info) = &self.debug_info {
-                                ui.label(info);
-                            } else {
-                                ui.label("No document loaded");
-                            }
-                            ui.separator();
-                            let mut text_layer_debug = self.viewer.text_layer_debug();
-                            if ui
-                                .checkbox(&mut text_layer_debug, "Show text layer")
-                                .clicked()
-                            {
-                                self.viewer.set_text_layer_debug(text_layer_debug);
-                            }
-                        });
-                });
-        }
+        egui::Panel::bottom("app_debug")
+            .resizable(true)
+            .show_inside(ui, |ui| {
+                egui::CollapsingHeader::new("Debug")
+                    .default_open(false)
+                    .show(ui, |ui| {
+                        if let Some(info) = &self.debug_info {
+                            ui.label(info);
+                        } else {
+                            ui.label("No document loaded");
+                        }
+                    });
+            });
 
         if let Some(active_tab) = self.active_sidebar_tab() {
             egui::Panel::left("viewkai.sidebar")

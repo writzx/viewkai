@@ -328,19 +328,15 @@ impl ViewerPlugin for SearchPlugin {
                             }
                         }
 
-                        if ui
-                            .button("<")
-                            .on_hover_text("Previous match (Shift+F3)")
-                            .clicked()
-                        {
+                        if ui.button("▲").clicked() {
                             go_prev = true;
                         }
 
-                        if ui.button(">").on_hover_text("Next match (F3)").clicked() {
+                        if ui.button("▼").clicked() {
                             go_next = true;
                         }
 
-                        if ui.button("x").on_hover_text("Close (Esc)").clicked() {
+                        if ui.button("✕").clicked() {
                             close = true;
                         }
                     });

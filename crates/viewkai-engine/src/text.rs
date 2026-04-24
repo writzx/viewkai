@@ -24,13 +24,6 @@ fn pdf_rect_to_viewkai(rect: PdfRect, page_height_pt: f32) -> PointsRect {
     }
 }
 
-fn is_plausible_glyph_bbox(bbox: PointsRect, page_width_pt: f32, page_height_pt: f32) -> bool {
-    bbox.width > 0.0
-        && bbox.height > 0.0
-        && bbox.width <= page_width_pt * 0.5
-        && bbox.height <= page_height_pt * 0.5
-}
-
 /// Extract all text from a single PDF page.
 ///
 /// Returns a [`PageText`] containing per-glyph bboxes, word groups, and line
@@ -70,7 +63,6 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
             },
         })?;
 
-    let page_width_pt = page.width().value;
     let page_height_pt = page.height().value;
     let page_text = page.text().map_err(|e| EngineError::Pdfium {
         message: e.to_string(),
@@ -89,16 +81,7 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
         let Ok(rect) = char_obj.tight_bounds() else {
             continue;
         };
-        let mut bbox = pdf_rect_to_viewkai(rect, page_height_pt);
-        if !is_plausible_glyph_bbox(bbox, page_width_pt, page_height_pt) {
-            let Ok(loose_rect) = char_obj.loose_bounds() else {
-                continue;
-            };
-            bbox = pdf_rect_to_viewkai(loose_rect, page_height_pt);
-            if !is_plausible_glyph_bbox(bbox, page_width_pt, page_height_pt) {
-                continue;
-            }
-        }
+        let bbox = pdf_rect_to_viewkai(rect, page_height_pt);
         if bbox.width <= 0.0 || bbox.height <= 0.0 {
             continue;
         }

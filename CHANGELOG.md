@@ -2,36 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.1] — 2026-04-24 — UI Polish + Diagnosis Pass
-
-### Fixed
-- Text-layer debug overlay on `viewkai-web` now draws per-word rectangles (H2: pdfium-WASM glyph bbox sanity clamp in `viewkai-engine`)
-- 100%-zoom is now crisp on retina/high-DPR displays (DPR-aware DPI bucket selection)
-- Thumbnail click now scrolls to the target page (expanded tiny rect to full page rect)
-- Thumbnail-sidebar scrollbar no longer overlays thumbnails (AlwaysVisible gutter)
-- Find-overlay `▲` `▼` `✕` glyphs replaced with ASCII `<` `>` `x` (with hover tooltips)
-- Scroll-lag profile documented; prefetch distance increased 2→3; architectural fix deferred to Plan 04
-
-### Changed
-- Mode selector on native `viewkai-app` is now a `ComboBox` (was: radio buttons)
-- Thumbnail tiles styled as clickable buttons with active-page indicator
-- `Show text layer` moved from plugin toolbar + `View→Debug` menu into bottom debug panel
-
-### Added
-- `View→Debug View` menu-bar checkbox toggles bottom debug-panel visibility
-- `<` and `>` prev/next page buttons on bottom page-navigation row, boundary-disabled
-- Page number auto-updates during scroll (focus-guarded)
-
-### Removed
-- `View→Sidebar` menu submenu (keyboard shortcuts `Ctrl+Shift+O` / `Ctrl+Shift+T` remain canonical)
-- Plugin-toolbar checkboxes for outline / thumbnails / text-layer
-
-### Internal
-- `ZoomState::zoom_to_dpi_bucket_with_dpr(zoom, pixels_per_point)` — new `pub(crate)` helper; existing `zoom_to_dpi_bucket(zoom)` public signature unchanged
-
-### Notes
-- LOC delta: +331 source lines (budget was +100; exceeded due to comprehensive UI restructuring across 11 files; test files add +383 lines not counted against budget)
-
 ## [0.2.0] — 2026-04-21 — Application Shell
 
 ### Phase 0 — Layout engine refactor + baseline metrics
