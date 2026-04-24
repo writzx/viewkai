@@ -75,7 +75,7 @@ impl RenderState {
     fn new() -> Self {
         Self {
             cache: TextureCache::default_budget(),
-            visibility: VisibilityTracker::new(2),
+            visibility: VisibilityTracker::new(3),
             zoom: ZoomState::default(),
         }
     }
@@ -1013,7 +1013,10 @@ impl Viewer {
                     rotated_size.width_pt,
                     rotated_size.height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
                 let display_size = Vec2::new(
@@ -1134,7 +1137,10 @@ impl Viewer {
                     1.0
                 };
 
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
 
                 let (page_tops, page_heights) =
@@ -1307,7 +1313,10 @@ impl Viewer {
                     spread_width_pt,
                     spread_height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
 
@@ -1556,6 +1565,9 @@ impl Viewer {
         now: f64,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
     ) {
+        // TODO(plan-04): synchronous in-frame rasterization remains the dominant
+        // scroll hitch source; Phase D only widens prefetch instead of adding an
+        // async render queue or layout memoization here.
         for &idx in to_render {
             let page_index = PageIndex(idx);
             let rotation = page_rotations.get(&page_index).copied().unwrap_or_default();
