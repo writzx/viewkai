@@ -399,3 +399,66 @@ impl ViewerPlugin for ThumbnailPlugin {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::Cell, collections::HashMap};
+
+    use egui::Color32;
+    use viewkai_core::{PageIndex, PointsRect};
+
+    use super::{PluginContext, ThumbnailPlugin, ViewerPlugin};
+
+    fn plugin_context<'a>(
+        egui_ctx: &'a egui::Context,
+        visible_pages: &'a [PageIndex],
+        rotations: &'a HashMap<PageIndex, viewkai_core::PdfPageRotation>,
+        pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
+    ) -> PluginContext<'a> {
+        PluginContext::new(
+            None,
+            1.0,
+            visible_pages,
+            egui_ctx,
+            Color32::WHITE,
+            true,
+            rotations,
+            None,
+            pending_scroll,
+        )
+    }
+
+    #[test]
+    fn active_page_indicator_tracks_viewport() {
+        let mut plugin = ThumbnailPlugin::new();
+        let egui_ctx = egui::Context::default();
+        let pending_scroll = Cell::new(None);
+        let visible_pages = [PageIndex(10)];
+        let rotations = HashMap::new();
+        let mut ctx = plugin_context(&egui_ctx, &visible_pages, &rotations, &pending_scroll);
+
+        plugin.on_frame_update(&mut ctx);
+
+        assert_eq!(plugin.active_page, Some(PageIndex(10)));
+    }
+
+    #[test]
+    fn active_page_indicator_updates_o1_per_scroll() {
+        let mut plugin = ThumbnailPlugin::new();
+        let egui_ctx = egui::Context::default();
+        let pending_scroll = Cell::new(None);
+        let rotations = HashMap::new();
+
+        for step in 0..100 {
+            let visible_pages = [PageIndex((step / 34) % 3)];
+            let mut ctx = plugin_context(&egui_ctx, &visible_pages, &rotations, &pending_scroll);
+            plugin.on_frame_update(&mut ctx);
+        }
+
+        assert!(
+            plugin.active_page_update_count <= 4,
+            "expected O(1) active-page updates, got {}",
+            plugin.active_page_update_count
+        );
+    }
+}
