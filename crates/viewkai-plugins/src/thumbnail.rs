@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use egui::{Color32, TextureHandle, TextureOptions, Ui, Vec2};
+use egui::{Color32, Stroke, TextureHandle, TextureOptions, Ui, Vec2};
 use viewkai_core::{PageIndex, PdfPageRotation, PointsRect};
 use viewkai_engine::Document;
 
@@ -113,6 +113,8 @@ pub struct ThumbnailPlugin {
     pending_pages: Vec<PageIndex>,
     thumbnail_width: u32,
     pending_click_page: Option<PageIndex>,
+    active_page: Option<PageIndex>,
+    active_page_update_count: u64,
     document_identity: Option<usize>,
 }
 
@@ -157,49 +159,82 @@ impl ThumbnailPlugin {
         };
 
         self.sync_document(doc);
+        let _ = self.active_page_update_count;
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            for page_idx in 0..doc.page_count() {
-                let page = PageIndex(page_idx);
-                let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
-                let label = format!("Page {}", page_idx + 1);
-                let mut clicked = false;
-
-                ui.vertical(|ui| {
+        egui::ScrollArea::vertical()
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+            .show(ui, |ui| {
+                for page_idx in 0..doc.page_count() {
+                    let page = PageIndex(page_idx);
+                    let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
+                    let accessible_label = format!("Page {}", page_idx + 1);
+                    let is_active = self.active_page == Some(page);
                     let preview_height = self.preview_height_for(doc, page);
                     let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
-                    let (rect, response) =
-                        ui.allocate_exact_size(preview_size, egui::Sense::click());
+                    let mut frame = egui::Frame::new()
+                        .corner_radius(4.0)
+                        .inner_margin(4.0)
+                        .stroke(if is_active {
+                            Stroke::new(2.0, ui.visuals().selection.stroke.color)
+                        } else {
+                            Stroke::NONE
+                        })
+                        .begin(ui);
+
+                    let (rect, image_response) = frame
+                        .content_ui
+                        .allocate_exact_size(preview_size, egui::Sense::hover());
 
                     if let Some(texture) = texture {
-                        ui.painter().image(
+                        frame.content_ui.painter().image(
                             texture.id(),
                             rect,
                             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                             Color32::WHITE,
                         );
                     } else {
-                        ui.painter().rect_filled(rect, 4.0, Color32::from_gray(210));
-                        ui.painter().text(
+                        frame
+                            .content_ui
+                            .painter()
+                            .rect_filled(rect, 4.0, Color32::from_gray(210));
+                        frame.content_ui.painter().text(
                             rect.center(),
                             egui::Align2::CENTER_CENTER,
                             "Loading…",
-                            egui::TextStyle::Body.resolve(ui.style()),
+                            egui::TextStyle::Body.resolve(frame.content_ui.style()),
                             Color32::from_gray(60),
                         );
                     }
 
-                    clicked |= response.clicked();
-                    clicked |= ui.selectable_label(false, label).clicked();
-                    ui.add_space(8.0);
-                });
+                    let allocation = frame.allocate_space(ui);
+                    let response = ui.interact(
+                        allocation.rect,
+                        ui.id().with(("thumbnail-tile", page.0)),
+                        egui::Sense::click(),
+                    );
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::WidgetType::Button,
+                            ui.is_enabled(),
+                            &accessible_label,
+                        )
+                    });
+                    frame.frame.fill = if is_active {
+                        ui.visuals().selection.bg_fill
+                    } else if response.hovered() || image_response.hovered() {
+                        ui.visuals().widgets.hovered.bg_fill
+                    } else {
+                        Color32::TRANSPARENT
+                    };
+                    frame.paint(ui);
+                    ui.add_space(4.0);
 
-                if clicked {
-                    self.pending_click_page = Some(page);
-                    ui.ctx().request_repaint();
+                    if response.clicked() {
+                        self.pending_click_page = Some(page);
+                        ui.ctx().request_repaint();
+                    }
                 }
-            }
-        });
+            });
     }
 
     /// Set the thumbnail cache budget in bytes.
@@ -247,6 +282,7 @@ impl ThumbnailPlugin {
         self.cache.clear();
         self.pending_pages.clear();
         self.pending_click_page = None;
+        self.active_page = None;
     }
 
     fn sync_document(&mut self, document: &Document) {
@@ -266,6 +302,8 @@ impl Default for ThumbnailPlugin {
             pending_pages: Vec::new(),
             thumbnail_width: 120,
             pending_click_page: None,
+            active_page: None,
+            active_page_update_count: 0,
             document_identity: None,
         }
     }
@@ -281,7 +319,9 @@ impl ViewerPlugin for ThumbnailPlugin {
     fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
         // justify: Plan 03.25 D-10
         let hide_toolbar = ui
-            .data(|data| data.get_temp::<bool>(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles")))
+            .data(|data| {
+                data.get_temp::<bool>(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"))
+            })
             .unwrap_or(false);
         if !hide_toolbar {
             ui.checkbox(&mut self.visible, "Show Thumbnails");
@@ -290,6 +330,12 @@ impl ViewerPlugin for ThumbnailPlugin {
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
         self.cache.tick_frame();
+
+        let new_active = ctx.visible_pages.first().copied();
+        if new_active != self.active_page {
+            self.active_page = new_active;
+            self.active_page_update_count = self.active_page_update_count.saturating_add(1);
+        }
 
         let Some(document) = ctx.document else {
             if self.document_identity.take().is_some() {

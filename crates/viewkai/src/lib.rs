@@ -1901,13 +1901,17 @@ impl Viewer {
             );
             let page_size = page_state_size(&pages[page.0]);
             let rotation = page_rotations.get(&page).copied().unwrap_or_default();
-            let target_rect = Self::rect_in_page(
-                page_rect,
-                rect_in_page_pt,
-                effective_zoom,
-                rotation,
-                page_size,
-            );
+            let target_rect = if rect_in_page_pt.width <= 1.0 && rect_in_page_pt.height <= 1.0 {
+                page_rect
+            } else {
+                Self::rect_in_page(
+                    page_rect,
+                    rect_in_page_pt,
+                    effective_zoom,
+                    rotation,
+                    page_size,
+                )
+            };
             ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
         }
     }
