@@ -1,6 +1,6 @@
 [package]
 name = "viewkai-plugins"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -16,8 +16,8 @@ test-support = []
 
 [dependencies]
 egui = { workspace = true }
-viewkai-core = { path = "../viewkai-core" }
-viewkai-engine = { path = "../viewkai-engine" }
+viewkai-core = { path = "../viewkai-core" , version = "0.2.1" }
+viewkai-engine = { path = "../viewkai-engine" , version = "0.2.1" }
 
 [dev-dependencies]
 egui_kittest = { version = "0.34", features = ["wgpu", "snapshot"] }

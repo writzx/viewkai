@@ -1,6 +1,6 @@
 [package]
 name = "viewkai-engine"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -11,7 +11,7 @@ keywords = ["pdf", "pdfium", "rendering", "viewer", "wasm"]
 categories = ["graphics", "rendering", "wasm"]
 
 [dependencies]
-viewkai-core = { path = "../viewkai-core" }
+viewkai-core = { path = "../viewkai-core" , version = "0.2.1" }
 pdfium-render = { workspace = true, features = ["pdfium_latest", "image_latest"] }
 thiserror = { workspace = true }
 

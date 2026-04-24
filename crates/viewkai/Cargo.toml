@@ -1,6 +1,6 @@
 [package]
 name = "viewkai"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -11,13 +11,13 @@ keywords = ["pdf", "egui", "viewer", "wasm", "gui"]
 categories = ["gui", "rendering", "wasm"]
 
 [dependencies]
-viewkai-core = { path = "../viewkai-core" }
-viewkai-engine = { path = "../viewkai-engine" }
-viewkai-plugins = { path = "../viewkai-plugins" }
+viewkai-core = { path = "../viewkai-core" , version = "0.2.1" }
+viewkai-engine = { path = "../viewkai-engine" , version = "0.2.1" }
+viewkai-plugins = { path = "../viewkai-plugins" , version = "0.2.1" }
 egui = { workspace = true }
 
 [dev-dependencies]
-viewkai-engine = { path = "../viewkai-engine" }
+viewkai-engine = { path = "../viewkai-engine" , version = "0.2.1" }
 criterion = { version = "0.5", features = ["html_reports"] }
 egui_kittest = { version = "0.34", features = ["wgpu", "snapshot", "eframe"] }
 
