@@ -1,6 +1,6 @@
 [package]
 name = "viewkai-app"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -16,9 +16,9 @@ path = "src/main.rs"
 
 [dependencies]
 eframe = { workspace = true }
-viewkai = { path = "../viewkai" }
-viewkai-core = { path = "../viewkai-core" }
-viewkai-engine = { path = "../viewkai-engine" }
+viewkai = { path = "../viewkai" , version = "0.2.1" }
+viewkai-core = { path = "../viewkai-core" , version = "0.2.1" }
+viewkai-engine = { path = "../viewkai-engine" , version = "0.2.1" }
 rfd = { workspace = true }
 ehttp = { workspace = true }
 
