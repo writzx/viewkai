@@ -328,7 +328,11 @@ impl ViewerPlugin for SearchPlugin {
                             }
                         }
 
-                        if ui.button("<").on_hover_text("Previous match (Shift+F3)").clicked() {
+                        if ui
+                            .button("<")
+                            .on_hover_text("Previous match (Shift+F3)")
+                            .clicked()
+                        {
                             go_prev = true;
                         }
 

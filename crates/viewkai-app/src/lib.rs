@@ -747,10 +747,7 @@ impl eframe::App for App {
                 self.view_mode_selector_ui(ui);
                 ui.separator();
                 ui.data_mut(|data| {
-                    data.insert_temp(
-                        egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"),
-                        true,
-                    );
+                    data.insert_temp(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"), true);
                     data.insert_temp(
                         egui::Id::new("viewkai.hide_text_layer_toolbar_toggle"),
                         true,
@@ -762,11 +759,7 @@ impl eframe::App for App {
 
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                let current_page = self
-                    .viewer
-                    .visible_pages()
-                    .first()
-                    .map_or(0, |page| page.0);
+                let current_page = self.viewer.visible_pages().first().map_or(0, |page| page.0);
                 let at_first_page = current_page == 0;
                 let at_last_page = self.total_pages == 0 || current_page + 1 >= self.total_pages;
 

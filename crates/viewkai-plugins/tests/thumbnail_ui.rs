@@ -3,7 +3,10 @@
 use std::sync::{Mutex, OnceLock};
 
 use egui::accesskit::Role;
-use egui_kittest::{Harness, kittest::{NodeT, Queryable}};
+use egui_kittest::{
+    Harness,
+    kittest::{NodeT, Queryable},
+};
 use viewkai_engine::Document;
 use viewkai_plugins::ThumbnailPlugin;
 

@@ -52,8 +52,5 @@ fn page_input_does_not_fight_user_edit() {
     h.get_by_role(Role::TextInput).type_text("5");
     h.run_ok();
 
-    assert_eq!(
-        h.get_by_role(Role::TextInput).value().as_deref(),
-        Some("5")
-    );
+    assert_eq!(h.get_by_role(Role::TextInput).value().as_deref(), Some("5"));
 }

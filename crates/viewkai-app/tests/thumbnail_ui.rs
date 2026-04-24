@@ -29,7 +29,10 @@ fn thumbnail_click_scrolls_to_page() {
 
     h.get_by_label("Single Page").click();
     h.run_ok();
-    assert_eq!(h.state().viewer().visible_pages().first().copied(), Some(PageIndex(0)));
+    assert_eq!(
+        h.state().viewer().visible_pages().first().copied(),
+        Some(PageIndex(0))
+    );
 
     h.key_press_modifiers(ctrl_shift(), egui::Key::T);
     h.run_ok();
@@ -38,5 +41,8 @@ fn thumbnail_click_scrolls_to_page() {
     h.run_ok();
     h.run_ok();
 
-    assert_eq!(h.state().viewer().visible_pages().first().copied(), Some(PageIndex(1)));
+    assert_eq!(
+        h.state().viewer().visible_pages().first().copied(),
+        Some(PageIndex(1))
+    );
 }

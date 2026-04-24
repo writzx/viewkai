@@ -1,9 +1,16 @@
 //! Search overlay icon regression tests.
 
-use std::{cell::Cell, collections::HashMap, sync::{Mutex, OnceLock}};
+use std::{
+    cell::Cell,
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+};
 
 use egui::accesskit::Role;
-use egui_kittest::{Harness, kittest::{NodeT, Queryable}};
+use egui_kittest::{
+    Harness,
+    kittest::{NodeT, Queryable},
+};
 use viewkai_core::{PageIndex, PointsRect};
 use viewkai_engine::Document;
 use viewkai_plugins::{PluginContext, SearchPlugin, ViewerPlugin};
@@ -64,7 +71,9 @@ fn find_overlay_uses_ascii_glyphs() {
         .collect::<Vec<_>>();
 
     assert!(
-        button_labels.iter().all(|label| label.chars().all(|ch| ch < '\u{2500}')),
+        button_labels
+            .iter()
+            .all(|label| label.chars().all(|ch| ch < '\u{2500}')),
         "expected ASCII-only button labels, got {button_labels:?}"
     );
 }

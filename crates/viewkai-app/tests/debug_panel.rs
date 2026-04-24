@@ -50,5 +50,8 @@ fn no_sidebar_submenu() {
 
     let result = catch_unwind(AssertUnwindSafe(|| h.get_by_label("Sidebar")));
 
-    assert!(result.is_err(), "View menu should not expose a Sidebar submenu");
+    assert!(
+        result.is_err(),
+        "View menu should not expose a Sidebar submenu"
+    );
 }

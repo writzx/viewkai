@@ -160,7 +160,9 @@ impl ViewerPlugin for OutlinePlugin {
     fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
         // justify: Plan 03.25 D-10
         let hide_toolbar = ui
-            .data(|data| data.get_temp::<bool>(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles")))
+            .data(|data| {
+                data.get_temp::<bool>(egui::Id::new("viewkai.hide_sidebar_toolbar_toggles"))
+            })
             .unwrap_or(false);
         if !hide_toolbar {
             ui.checkbox(&mut self.visible, "Show Outline");

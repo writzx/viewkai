@@ -12,12 +12,18 @@ fn test_lock() -> &'static Mutex<()> {
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
-fn nav_button<'a>(h: &'a egui_kittest::Harness<'static, viewkai_app::App>, label: &'a str) -> egui_kittest::Node<'a> {
+fn nav_button<'a>(
+    h: &'a egui_kittest::Harness<'static, viewkai_app::App>,
+    label: &'a str,
+) -> egui_kittest::Node<'a> {
     h.query_by(|node| node.role() == Role::Button && node.label().as_deref() == Some(label))
         .unwrap_or_else(|| panic!("missing page nav button {label}"))
 }
 
-fn assert_visible_page(h: &egui_kittest::Harness<'static, viewkai_app::App>, expected_page_num: usize) {
+fn assert_visible_page(
+    h: &egui_kittest::Harness<'static, viewkai_app::App>,
+    expected_page_num: usize,
+) {
     assert_eq!(
         h.state().viewer().visible_pages().first().copied(),
         Some(PageIndex(expected_page_num - 1))
