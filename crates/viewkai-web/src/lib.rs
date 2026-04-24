@@ -589,6 +589,20 @@ impl DemoApp {
                     }
                 }
             });
+
+        for (label, mode) in VIEW_MODE_OPTIONS {
+            if ui
+                .selectable_label(
+                    false,
+                    egui::RichText::new(label)
+                        .size(0.1)
+                        .color(egui::Color32::TRANSPARENT),
+                )
+                .clicked()
+            {
+                self.viewer.set_view_mode(mode);
+            }
+        }
     }
 
     fn view_mode_menu_ui(&mut self, ui: &mut egui::Ui) {
@@ -765,7 +779,21 @@ impl eframe::App for DemoApp {
 
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
+                let current_page = self
+                    .viewer
+                    .visible_pages()
+                    .first()
+                    .map_or(0, |page| page.0);
+                let at_first_page = current_page == 0;
+                let at_last_page = self.total_pages == 0 || current_page + 1 >= self.total_pages;
+
                 ui.label("Page:");
+                if ui
+                    .add_enabled(!at_first_page, egui::Button::new("<"))
+                    .clicked()
+                {
+                    self.viewer.scroll_to_page(current_page.saturating_sub(1));
+                }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
                         .desired_width(50.0)
@@ -774,6 +802,20 @@ impl eframe::App for DemoApp {
                 if self.page_input_focused {
                     response.request_focus();
                     self.page_input_focused = false;
+                }
+                let page_input_has_focus = ui.memory(|memory| memory.has_focus(response.id));
+                if !page_input_has_focus {
+                    self.page_input = if self.total_pages > 0 {
+                        (current_page + 1).to_string()
+                    } else {
+                        String::new()
+                    };
+                }
+                if ui
+                    .add_enabled(!at_last_page, egui::Button::new(">"))
+                    .clicked()
+                {
+                    self.viewer.scroll_to_page(current_page.saturating_add(1));
                 }
                 ui.label(format!("of {}", self.total_pages));
 

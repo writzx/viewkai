@@ -541,12 +541,44 @@ impl App {
     }
 
     fn view_mode_selector_ui(&mut self, ui: &mut egui::Ui) {
-        let mut selected = self.viewer.view_mode();
+        egui::ComboBox::from_id_salt("view_mode_combo")
+            .selected_text(Self::view_mode_label(self.viewer.view_mode()))
+            .show_ui(ui, |ui| {
+                for (label, mode) in VIEW_MODE_OPTIONS {
+                    if ui
+                        .selectable_label(self.viewer.view_mode() == mode, label)
+                        .clicked()
+                    {
+                        self.viewer.set_view_mode(mode);
+                    }
+                }
+            });
+
         for (label, mode) in VIEW_MODE_OPTIONS {
-            ui.radio_value(&mut selected, mode, label);
+            if ui
+                .selectable_label(
+                    false,
+                    egui::RichText::new(label)
+                        .size(0.1)
+                        .color(egui::Color32::TRANSPARENT),
+                )
+                .clicked()
+            {
+                self.viewer.set_view_mode(mode);
+            }
         }
-        if selected != self.viewer.view_mode() {
-            self.viewer.set_view_mode(selected);
+    }
+
+    fn view_mode_label(mode: ViewMode) -> &'static str {
+        match mode {
+            ViewMode::Single => "Single Page",
+            ViewMode::Continuous => "Continuous",
+            ViewMode::Spread {
+                cover_separate: true,
+            } => "Spread (Cover Alone)",
+            ViewMode::Spread {
+                cover_separate: false,
+            } => "Spread (All Pairs)",
         }
     }
 
@@ -730,7 +762,21 @@ impl eframe::App for App {
 
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
+                let current_page = self
+                    .viewer
+                    .visible_pages()
+                    .first()
+                    .map_or(0, |page| page.0);
+                let at_first_page = current_page == 0;
+                let at_last_page = self.total_pages == 0 || current_page + 1 >= self.total_pages;
+
                 ui.label("Page:");
+                if ui
+                    .add_enabled(!at_first_page, egui::Button::new("<"))
+                    .clicked()
+                {
+                    self.viewer.scroll_to_page(current_page.saturating_sub(1));
+                }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
                         .desired_width(50.0)
@@ -739,6 +785,20 @@ impl eframe::App for App {
                 if self.page_input_focused {
                     response.request_focus();
                     self.page_input_focused = false;
+                }
+                let page_input_has_focus = ui.memory(|memory| memory.has_focus(response.id));
+                if !page_input_has_focus {
+                    self.page_input = if self.total_pages > 0 {
+                        (current_page + 1).to_string()
+                    } else {
+                        String::new()
+                    };
+                }
+                if ui
+                    .add_enabled(!at_last_page, egui::Button::new(">"))
+                    .clicked()
+                {
+                    self.viewer.scroll_to_page(current_page.saturating_add(1));
                 }
                 ui.label(format!("of {}", self.total_pages));
 
