@@ -68,7 +68,13 @@ impl ZoomState {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[must_use]
     pub fn zoom_to_dpi_bucket(zoom: f32) -> u32 {
-        let target_dpi = (zoom * 72.0).round() as u32;
+        Self::zoom_to_dpi_bucket_with_dpr(zoom, 1.0)
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[must_use]
+    pub(crate) fn zoom_to_dpi_bucket_with_dpr(zoom: f32, pixels_per_point: f32) -> u32 {
+        let target_dpi = (zoom * pixels_per_point * 72.0).round() as u32;
 
         BUCKETS
             .iter()
@@ -117,5 +123,11 @@ mod tests {
         assert_eq!(ZoomState::zoom_to_dpi_bucket(1.0), 72);
         assert_eq!(ZoomState::zoom_to_dpi_bucket(2.0), 144);
         assert_eq!(ZoomState::zoom_to_dpi_bucket(1.333), 96);
+    }
+
+    #[test]
+    fn dpr_zoom_bucket() {
+        assert_eq!(ZoomState::zoom_to_dpi_bucket_with_dpr(1.0, 2.0), 144);
+        assert_eq!(ZoomState::zoom_to_dpi_bucket_with_dpr(1.0, 1.0), 72);
     }
 }

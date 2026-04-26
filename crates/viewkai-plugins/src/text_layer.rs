@@ -328,6 +328,20 @@ fn page_rect_to_screen(bbox: PointsRect, page_origin: egui::Pos2, zoom: f32) -> 
     )
 }
 
+fn clip_rect_to_page(rect: PointsRect, page_rect: PointsRect) -> Option<PointsRect> {
+    let left = rect.x.max(page_rect.x);
+    let top = rect.y.max(page_rect.y);
+    let right = (rect.x + rect.width).min(page_rect.x + page_rect.width);
+    let bottom = (rect.y + rect.height).min(page_rect.y + page_rect.height);
+
+    (right > left && bottom > top).then_some(PointsRect {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top,
+    })
+}
+
 impl Sealed for TextLayerPlugin {}
 
 impl ViewerPlugin for TextLayerPlugin {
@@ -346,6 +360,12 @@ impl ViewerPlugin for TextLayerPlugin {
             return;
         };
         let rotation = ctx.rotation_of(page);
+        let page_rect = PointsRect {
+            x: 0.0,
+            y: 0.0,
+            width: page_size.width_pt,
+            height: page_size.height_pt,
+        };
 
         let page_origin = ctx
             .page_rect_screen
@@ -355,8 +375,11 @@ impl ViewerPlugin for TextLayerPlugin {
 
         if self.debug {
             for word in &text.words {
+                let Some(word_bbox) = clip_rect_to_page(word.bbox, page_rect) else {
+                    continue;
+                };
                 let screen_rect = page_rect_to_screen(
-                    forward_rotate_rect(word.bbox, rotation, page_size),
+                    forward_rotate_rect(word_bbox, rotation, page_size),
                     page_origin,
                     zoom,
                 );
@@ -731,6 +754,32 @@ mod tests {
             Some(SelectionRange {
                 start,
                 end: CharIndex { page, char: 2 },
+            })
+        );
+    }
+
+    #[test]
+    fn clip_rect_to_page_bounds_intersection() {
+        assert_eq!(
+            clip_rect_to_page(
+                PointsRect {
+                    x: -10.0,
+                    y: 20.0,
+                    width: 40.0,
+                    height: 15.0,
+                },
+                PointsRect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 25.0,
+                    height: 100.0,
+                },
+            ),
+            Some(PointsRect {
+                x: 0.0,
+                y: 20.0,
+                width: 25.0,
+                height: 15.0,
             })
         );
     }

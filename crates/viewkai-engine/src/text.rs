@@ -24,6 +24,26 @@ fn pdf_rect_to_viewkai(rect: PdfRect, page_height_pt: f32) -> PointsRect {
     }
 }
 
+const GLYPH_BBOX_PAGE_FRACTION_LIMIT: f32 = 0.5;
+const GLYPH_BBOX_PAGE_TOLERANCE_PT: f32 = 1.0;
+
+fn glyph_bbox_is_plausible(bbox: PointsRect, page_rect: PointsRect) -> bool {
+    if bbox.width <= 0.0 || bbox.height <= 0.0 {
+        return false;
+    }
+
+    let max_width = page_rect.width * GLYPH_BBOX_PAGE_FRACTION_LIMIT;
+    let max_height = page_rect.height * GLYPH_BBOX_PAGE_FRACTION_LIMIT;
+    if bbox.width > max_width || bbox.height > max_height {
+        return false;
+    }
+
+    bbox.x >= page_rect.x - GLYPH_BBOX_PAGE_TOLERANCE_PT
+        && bbox.y >= page_rect.y - GLYPH_BBOX_PAGE_TOLERANCE_PT
+        && bbox.x + bbox.width <= page_rect.x + page_rect.width + GLYPH_BBOX_PAGE_TOLERANCE_PT
+        && bbox.y + bbox.height <= page_rect.y + page_rect.height + GLYPH_BBOX_PAGE_TOLERANCE_PT
+}
+
 /// Extract all text from a single PDF page.
 ///
 /// Returns a [`PageText`] containing per-glyph bboxes, word groups, and line
@@ -63,7 +83,13 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
             },
         })?;
 
-    let page_height_pt = page.height().value;
+    let page_rect = PointsRect {
+        x: 0.0,
+        y: 0.0,
+        width: page.width().value,
+        height: page.height().value,
+    };
+    let page_height_pt = page_rect.height;
     let page_text = page.text().map_err(|e| EngineError::Pdfium {
         message: e.to_string(),
     })?;
@@ -82,7 +108,7 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
             continue;
         };
         let bbox = pdf_rect_to_viewkai(rect, page_height_pt);
-        if bbox.width <= 0.0 || bbox.height <= 0.0 {
+        if !glyph_bbox_is_plausible(bbox, page_rect) {
             continue;
         }
 
@@ -101,6 +127,59 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
         words,
         lines,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn page_rect() -> PointsRect {
+        PointsRect {
+            x: 0.0,
+            y: 0.0,
+            width: 100.0,
+            height: 200.0,
+        }
+    }
+
+    #[test]
+    fn rejects_implausibly_large_glyph_bbox() {
+        assert!(!glyph_bbox_is_plausible(
+            PointsRect {
+                x: 10.0,
+                y: 10.0,
+                width: 60.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
+
+    #[test]
+    fn rejects_out_of_page_glyph_bbox() {
+        assert!(!glyph_bbox_is_plausible(
+            PointsRect {
+                x: -5.0,
+                y: 10.0,
+                width: 8.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
+
+    #[test]
+    fn accepts_glyph_bbox_with_small_page_tolerance() {
+        assert!(glyph_bbox_is_plausible(
+            PointsRect {
+                x: -0.5,
+                y: 10.0,
+                width: 8.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
 }
 
 /// Group glyphs into words and lines using whitespace + y-baseline clustering.

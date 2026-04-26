@@ -992,7 +992,10 @@ impl Viewer {
                     rotated_size.width_pt,
                     rotated_size.height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
                 let display_size = Vec2::new(
@@ -1113,7 +1116,10 @@ impl Viewer {
                     1.0
                 };
 
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
 
                 let (page_tops, page_heights) =
@@ -1286,7 +1292,10 @@ impl Viewer {
                     spread_width_pt,
                     spread_height_pt,
                 );
-                let dpi = ZoomState::zoom_to_dpi_bucket(effective_zoom);
+                let dpi = ZoomState::zoom_to_dpi_bucket_with_dpr(
+                    effective_zoom,
+                    ui.ctx().pixels_per_point(),
+                );
                 let zoom_bucket = ZoomState::dpi_to_bucket_index(dpi);
                 let now = ui.input(|i| i.time);
 
