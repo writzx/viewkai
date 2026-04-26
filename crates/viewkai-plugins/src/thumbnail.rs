@@ -113,6 +113,7 @@ pub struct ThumbnailPlugin {
     pending_pages: Vec<PageIndex>,
     thumbnail_width: u32,
     pending_click_page: Option<PageIndex>,
+    active_page: Option<usize>,
     document_identity: Option<usize>,
 }
 
@@ -158,18 +159,30 @@ impl ThumbnailPlugin {
 
         self.sync_document(doc);
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
+        egui::ScrollArea::vertical()
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+            .show(ui, |ui| {
             for page_idx in 0..doc.page_count() {
                 let page = PageIndex(page_idx);
                 let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
-                let label = format!("Page {}", page_idx + 1);
-                let mut clicked = false;
-
-                ui.vertical(|ui| {
-                    let preview_height = self.preview_height_for(doc, page);
-                    let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
-                    let (rect, response) =
-                        ui.allocate_exact_size(preview_size, egui::Sense::click());
+                let is_active = self.active_page == Some(page_idx);
+                let preview_height = self.preview_height_for(doc, page);
+                let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
+                let frame = egui::Frame::new()
+                    .fill(if is_active {
+                        ui.visuals().selection.bg_fill.gamma_multiply(0.2)
+                    } else {
+                        ui.visuals().widgets.inactive.bg_fill
+                    })
+                    .stroke(if is_active {
+                        ui.visuals().selection.stroke
+                    } else {
+                        ui.visuals().widgets.noninteractive.bg_stroke
+                    })
+                    .inner_margin(egui::Margin::same(6))
+                    .corner_radius(6.0);
+                let inner = frame.show(ui, |ui| {
+                    let (rect, _) = ui.allocate_exact_size(preview_size, egui::Sense::hover());
 
                     if let Some(texture) = texture {
                         ui.painter().image(
@@ -188,16 +201,35 @@ impl ThumbnailPlugin {
                             Color32::from_gray(60),
                         );
                     }
-
-                    clicked |= response.clicked();
-                    clicked |= ui.selectable_label(false, label).clicked();
-                    ui.add_space(8.0);
+                });
+                let response = ui.interact(
+                    inner.response.rect,
+                    ui.make_persistent_id(("thumbnail", page_idx)),
+                    egui::Sense::click(),
+                );
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::Button,
+                        ui.is_enabled(),
+                        format!("Page {}", page_idx + 1),
+                    )
                 });
 
-                if clicked {
+                if response.hovered() && !is_active {
+                    ui.painter().rect_stroke(
+                        response.rect,
+                        6.0,
+                        ui.visuals().widgets.hovered.bg_stroke,
+                        egui::StrokeKind::Outside,
+                    );
+                }
+
+                if response.clicked() {
                     self.pending_click_page = Some(page);
                     ui.ctx().request_repaint();
                 }
+
+                ui.add_space(8.0);
             }
         });
     }
@@ -247,6 +279,7 @@ impl ThumbnailPlugin {
         self.cache.clear();
         self.pending_pages.clear();
         self.pending_click_page = None;
+        self.active_page = None;
     }
 
     fn sync_document(&mut self, document: &Document) {
@@ -255,6 +288,15 @@ impl ThumbnailPlugin {
             self.reset_document_state();
             self.document_identity = Some(identity);
         }
+    }
+
+    fn update_active_page(&mut self, ctx: &PluginContext<'_>) -> bool {
+        let next_active_page = ctx.visible_pages.first().map(|page| page.0);
+        if self.active_page == next_active_page {
+            return false;
+        }
+        self.active_page = next_active_page;
+        true
     }
 }
 
@@ -266,6 +308,7 @@ impl Default for ThumbnailPlugin {
             pending_pages: Vec::new(),
             thumbnail_width: 120,
             pending_click_page: None,
+            active_page: None,
             document_identity: None,
         }
     }
@@ -282,6 +325,7 @@ impl ViewerPlugin for ThumbnailPlugin {
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
         self.cache.tick_frame();
+        let active_page_changed = self.update_active_page(ctx);
 
         let Some(document) = ctx.document else {
             if self.document_identity.take().is_some() {
@@ -340,8 +384,70 @@ impl ViewerPlugin for ThumbnailPlugin {
             ctx.request_repaint();
         }
 
-        if !self.pending_pages.is_empty() {
+        if active_page_changed || !self.pending_pages.is_empty() {
             ctx.request_repaint();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::Cell, collections::HashMap};
+
+    use egui::Color32;
+
+    use super::*;
+
+    fn plugin_ctx<'a>(
+        egui_ctx: &'a egui::Context,
+        pending_scroll: &'a Cell<Option<(PageIndex, PointsRect)>>,
+        visible_pages: &'a [PageIndex],
+        rotations: &'a HashMap<PageIndex, PdfPageRotation>,
+    ) -> PluginContext<'a> {
+        PluginContext::new(
+            None,
+            1.0,
+            visible_pages,
+            egui_ctx,
+            Color32::WHITE,
+            true,
+            rotations,
+            None,
+            pending_scroll,
+        )
+    }
+
+    #[test]
+    fn active_page_updates_only_on_transition() {
+        let egui_ctx = egui::Context::default();
+        let pending_scroll = Cell::new(None);
+        let rotations = HashMap::new();
+        let mut plugin = ThumbnailPlugin::new();
+
+        let first = [PageIndex(2), PageIndex(3)];
+        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &first, &rotations)));
+        assert_eq!(plugin.active_page, Some(2));
+
+        assert!(!plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &first, &rotations)));
+        assert_eq!(plugin.active_page, Some(2));
+
+        let second = [PageIndex(5)];
+        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &second, &rotations)));
+        assert_eq!(plugin.active_page, Some(5));
+    }
+
+    #[test]
+    fn active_page_clears_when_viewport_is_empty() {
+        let egui_ctx = egui::Context::default();
+        let pending_scroll = Cell::new(None);
+        let rotations = HashMap::new();
+        let mut plugin = ThumbnailPlugin::new();
+
+        let visible = [PageIndex(1)];
+        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &visible, &rotations)));
+        assert_eq!(plugin.active_page, Some(1));
+
+        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &[], &rotations)));
+        assert_eq!(plugin.active_page, None);
     }
 }

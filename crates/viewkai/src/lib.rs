@@ -1861,23 +1861,29 @@ impl Viewer {
         effective_zoom: f32,
         available_width: f32,
     ) {
+        let content_origin = ui.min_rect().min;
+
         if let Some(target_idx) = pending_scroll_to_page.take()
             && let Some(&top) = page_tops.get(target_idx)
         {
             ui.scroll_to_rect(
-                Rect::from_min_size(egui::pos2(0.0, top), Vec2::new(1.0, 1.0)),
+                Rect::from_min_size(
+                    egui::pos2(content_origin.x, content_origin.y + top),
+                    Vec2::new(1.0, 1.0),
+                ),
                 Some(egui::Align::TOP),
             );
         } else if let Some((page, rect_in_page_pt)) = pending_plugin_scroll.take()
             && pages.get(page.0).is_some()
         {
-            let page_rect = Self::compute_page_viewport_rect(
+            let mut page_rect = Self::compute_page_viewport_rect(
                 page.0,
                 effective_zoom,
                 pages,
                 page_rotations,
                 available_width,
             );
+            page_rect.min += content_origin.to_vec2();
             let page_size = page_state_size(&pages[page.0]);
             let rotation = page_rotations.get(&page).copied().unwrap_or_default();
             let target_rect = Self::rect_in_page(
