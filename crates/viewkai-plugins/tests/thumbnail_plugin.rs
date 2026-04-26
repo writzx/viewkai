@@ -2,7 +2,7 @@
 
 use std::{cell::Cell, collections::HashMap, sync::OnceLock};
 
-use egui::{Color32, Key, TextureHandle};
+use egui::{Color32, Key, TextureHandle, accesskit::Role};
 use egui_kittest::{Harness, kittest::Queryable};
 use viewkai_core::{PageIndex, PointsRect};
 use viewkai_engine::Document;
@@ -142,14 +142,55 @@ fn thumbnail_cache_hit_updates_lru() {
 }
 
 #[test]
+fn no_caption_label_rendered() {
+    pdfium_once();
+
+    let mut harness = Harness::builder()
+        .with_size(egui::Vec2::new(180.0, 320.0))
+        .build_ui_state(
+            |ui, state: &mut PanelState| {
+                state.plugin.render_panel(ui, Some(&state.doc));
+            },
+            PanelState {
+                plugin: ThumbnailPlugin::new(),
+                doc: load_doc("500page"),
+            },
+        );
+    harness.run_ok();
+
+    assert!(harness.query_by_role_and_label(Role::Label, "Page 1").is_none());
+    assert!(harness.query_by_role_and_label(Role::Button, "Page 1").is_some());
+}
+
+#[test]
+fn scrollbar_has_gutter() {
+    pdfium_once();
+
+    let mut harness = Harness::builder()
+        .with_size(egui::Vec2::new(180.0, 320.0))
+        .build_ui_state(
+            |ui, state: &mut PanelState| {
+                state.plugin.render_panel(ui, Some(&state.doc));
+            },
+            PanelState {
+                plugin: ThumbnailPlugin::new(),
+                doc: load_doc("500page"),
+            },
+        );
+    harness.run_ok();
+
+    assert!(harness.query_by_role(Role::ScrollBar).is_some());
+}
+
+struct PanelState {
+    plugin: ThumbnailPlugin,
+    doc: Document,
+}
+
+#[test]
 #[allow(clippy::items_after_statements)]
 fn render_panel_click_queues_navigation() {
     pdfium_once();
-
-    struct PanelState {
-        plugin: ThumbnailPlugin,
-        doc: Document,
-    }
 
     let mut harness = Harness::builder().build_ui_state(
         |ui, state: &mut PanelState| {

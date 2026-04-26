@@ -1,6 +1,6 @@
 //! Viewer thumbnail integration tests.
 
-use egui::Color32;
+use egui::{Color32, accesskit::Role};
 use egui_kittest::{Harness, kittest::Queryable};
 use std::{
     cell::Cell,
@@ -118,6 +118,36 @@ fn thumbnail_click_scrolls_to_page() {
             },
         ))
     );
+}
+
+#[test]
+fn thumbnail_click_actually_scrolls() {
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    viewkai_engine::init().expect("Failed to initialize PDFium");
+
+    let bytes = include_bytes!("../../../tests/fixtures/500page.pdf").to_vec();
+    let mut viewer = Viewer::new();
+    viewer.load_bytes(bytes).expect("load 500page.pdf");
+    viewer.thumbnails_mut().set_visible(true);
+
+    let mut harness = Harness::builder()
+        .with_size(egui::Vec2::new(900.0, 600.0))
+        .build_ui_state(
+            |ui, viewer| {
+                let document = viewer.document_arc();
+                viewer.thumbnails_mut().render_panel(ui, document.as_deref());
+                viewer.show(ui);
+            },
+            viewer,
+        );
+
+    harness.run_steps(3);
+    harness.get_by_role_and_label(Role::Button, "Page 2").click();
+    harness.run_ok();
+
+    assert_eq!(harness.state().visible_pages().first(), Some(&PageIndex(1)));
 }
 
 #[test]

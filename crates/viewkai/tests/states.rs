@@ -3,6 +3,7 @@
 use egui_kittest::{Harness, kittest::Queryable};
 use std::sync::{Mutex, OnceLock};
 use viewkai::Viewer;
+use viewkai_core::PageIndex;
 use viewkai::zoom::ZoomState;
 
 fn test_lock() -> &'static Mutex<()> {
@@ -84,6 +85,33 @@ fn viewer_scroll_to_page_advances_layout() {
     harness.state_mut().scroll_to_page(499);
     harness.run_ok();
     assert_eq!(harness.state().page_count(), 500);
+}
+
+#[test]
+fn scroll_to_page_actually_scrolls() {
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    viewkai_engine::init().expect("Failed to initialize PDFium");
+
+    let bytes = include_bytes!("../../../tests/fixtures/500page.pdf").to_vec();
+    let mut viewer = Viewer::new();
+    viewer.load_bytes(bytes).expect("should load 500page.pdf");
+
+    let mut harness = Harness::builder()
+        .with_size(egui::Vec2::new(800.0, 600.0))
+        .build_ui_state(
+            |ui, viewer| {
+                viewer.show(ui);
+            },
+            viewer,
+        );
+    harness.run_ok();
+
+    harness.state_mut().scroll_to_page(100);
+    harness.run_ok();
+
+    assert_eq!(harness.state().visible_pages().first(), Some(&PageIndex(100)));
 }
 
 #[test]
