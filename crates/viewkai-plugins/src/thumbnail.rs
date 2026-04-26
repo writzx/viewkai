@@ -162,76 +162,79 @@ impl ThumbnailPlugin {
         egui::ScrollArea::vertical()
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
             .show(ui, |ui| {
-            for page_idx in 0..doc.page_count() {
-                let page = PageIndex(page_idx);
-                let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
-                let is_active = self.active_page == Some(page_idx);
-                let preview_height = self.preview_height_for(doc, page);
-                let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
-                let frame = egui::Frame::new()
-                    .fill(if is_active {
-                        ui.visuals().selection.bg_fill.gamma_multiply(0.2)
-                    } else {
-                        ui.visuals().widgets.inactive.bg_fill
-                    })
-                    .stroke(if is_active {
-                        ui.visuals().selection.stroke
-                    } else {
-                        ui.visuals().widgets.noninteractive.bg_stroke
-                    })
-                    .inner_margin(egui::Margin::same(6))
-                    .corner_radius(6.0);
-                let inner = frame.show(ui, |ui| {
-                    let (rect, _) = ui.allocate_exact_size(preview_size, egui::Sense::hover());
+                for page_idx in 0..doc.page_count() {
+                    let page = PageIndex(page_idx);
+                    let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);
+                    let is_active = self.active_page == Some(page_idx);
+                    let preview_height = self.preview_height_for(doc, page);
+                    let preview_size = Vec2::new(self.thumbnail_width as f32, preview_height);
+                    let frame = egui::Frame::new()
+                        .fill(if is_active {
+                            ui.visuals().selection.bg_fill.gamma_multiply(0.2)
+                        } else {
+                            ui.visuals().widgets.inactive.bg_fill
+                        })
+                        .stroke(if is_active {
+                            ui.visuals().selection.stroke
+                        } else {
+                            ui.visuals().widgets.noninteractive.bg_stroke
+                        })
+                        .inner_margin(egui::Margin::same(6))
+                        .corner_radius(6.0);
+                    let inner = frame.show(ui, |ui| {
+                        let (rect, _) = ui.allocate_exact_size(preview_size, egui::Sense::hover());
 
-                    if let Some(texture) = texture {
-                        ui.painter().image(
-                            texture.id(),
-                            rect,
-                            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                            Color32::WHITE,
-                        );
-                    } else {
-                        ui.painter().rect_filled(rect, 4.0, Color32::from_gray(210));
-                        ui.painter().text(
-                            rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            "Loading…",
-                            egui::TextStyle::Body.resolve(ui.style()),
-                            Color32::from_gray(60),
+                        if let Some(texture) = texture {
+                            ui.painter().image(
+                                texture.id(),
+                                rect,
+                                egui::Rect::from_min_max(
+                                    egui::pos2(0.0, 0.0),
+                                    egui::pos2(1.0, 1.0),
+                                ),
+                                Color32::WHITE,
+                            );
+                        } else {
+                            ui.painter().rect_filled(rect, 4.0, Color32::from_gray(210));
+                            ui.painter().text(
+                                rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                "Loading…",
+                                egui::TextStyle::Body.resolve(ui.style()),
+                                Color32::from_gray(60),
+                            );
+                        }
+                    });
+                    let response = ui.interact(
+                        inner.response.rect,
+                        ui.make_persistent_id(("thumbnail", page_idx)),
+                        egui::Sense::click(),
+                    );
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::WidgetType::Button,
+                            ui.is_enabled(),
+                            format!("Page {}", page_idx + 1),
+                        )
+                    });
+
+                    if response.hovered() && !is_active {
+                        ui.painter().rect_stroke(
+                            response.rect,
+                            6.0,
+                            ui.visuals().widgets.hovered.bg_stroke,
+                            egui::StrokeKind::Outside,
                         );
                     }
-                });
-                let response = ui.interact(
-                    inner.response.rect,
-                    ui.make_persistent_id(("thumbnail", page_idx)),
-                    egui::Sense::click(),
-                );
-                response.widget_info(|| {
-                    egui::WidgetInfo::labeled(
-                        egui::WidgetType::Button,
-                        ui.is_enabled(),
-                        format!("Page {}", page_idx + 1),
-                    )
-                });
 
-                if response.hovered() && !is_active {
-                    ui.painter().rect_stroke(
-                        response.rect,
-                        6.0,
-                        ui.visuals().widgets.hovered.bg_stroke,
-                        egui::StrokeKind::Outside,
-                    );
+                    if response.clicked() {
+                        self.pending_click_page = Some(page);
+                        ui.ctx().request_repaint();
+                    }
+
+                    ui.add_space(8.0);
                 }
-
-                if response.clicked() {
-                    self.pending_click_page = Some(page);
-                    ui.ctx().request_repaint();
-                }
-
-                ui.add_space(8.0);
-            }
-        });
+            });
     }
 
     /// Set the thumbnail cache budget in bytes.
@@ -425,14 +428,29 @@ mod tests {
         let mut plugin = ThumbnailPlugin::new();
 
         let first = [PageIndex(2), PageIndex(3)];
-        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &first, &rotations)));
+        assert!(plugin.update_active_page(&plugin_ctx(
+            &egui_ctx,
+            &pending_scroll,
+            &first,
+            &rotations
+        )));
         assert_eq!(plugin.active_page, Some(2));
 
-        assert!(!plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &first, &rotations)));
+        assert!(!plugin.update_active_page(&plugin_ctx(
+            &egui_ctx,
+            &pending_scroll,
+            &first,
+            &rotations
+        )));
         assert_eq!(plugin.active_page, Some(2));
 
         let second = [PageIndex(5)];
-        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &second, &rotations)));
+        assert!(plugin.update_active_page(&plugin_ctx(
+            &egui_ctx,
+            &pending_scroll,
+            &second,
+            &rotations
+        )));
         assert_eq!(plugin.active_page, Some(5));
     }
 
@@ -444,10 +462,20 @@ mod tests {
         let mut plugin = ThumbnailPlugin::new();
 
         let visible = [PageIndex(1)];
-        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &visible, &rotations)));
+        assert!(plugin.update_active_page(&plugin_ctx(
+            &egui_ctx,
+            &pending_scroll,
+            &visible,
+            &rotations
+        )));
         assert_eq!(plugin.active_page, Some(1));
 
-        assert!(plugin.update_active_page(&plugin_ctx(&egui_ctx, &pending_scroll, &[], &rotations)));
+        assert!(plugin.update_active_page(&plugin_ctx(
+            &egui_ctx,
+            &pending_scroll,
+            &[],
+            &rotations
+        )));
         assert_eq!(plugin.active_page, None);
     }
 }

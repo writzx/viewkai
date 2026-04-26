@@ -158,8 +158,16 @@ fn no_caption_label_rendered() {
         );
     harness.run_ok();
 
-    assert!(harness.query_by_role_and_label(Role::Label, "Page 1").is_none());
-    assert!(harness.query_by_role_and_label(Role::Button, "Page 1").is_some());
+    assert!(
+        harness
+            .query_by_role_and_label(Role::Label, "Page 1")
+            .is_none()
+    );
+    assert!(
+        harness
+            .query_by_role_and_label(Role::Button, "Page 1")
+            .is_some()
+    );
 }
 
 #[test]

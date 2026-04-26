@@ -68,5 +68,8 @@ fn show_plugin_toolbars_renders_checkbox() {
     harness.run_ok();
     // The checkbox is now in the app-shell debug panel, not the plugin toolbar.
     let result = catch_unwind(AssertUnwindSafe(|| harness.get_by_label("Show text layer")));
-    assert!(result.is_err(), "Show text layer must not appear in plugin toolbar");
+    assert!(
+        result.is_err(),
+        "Show text layer must not appear in plugin toolbar"
+    );
 }

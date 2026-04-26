@@ -3,8 +3,8 @@
 use egui_kittest::{Harness, kittest::Queryable};
 use std::sync::{Mutex, OnceLock};
 use viewkai::Viewer;
-use viewkai_core::PageIndex;
 use viewkai::zoom::ZoomState;
+use viewkai_core::PageIndex;
 
 fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -111,7 +111,10 @@ fn scroll_to_page_actually_scrolls() {
     harness.state_mut().scroll_to_page(100);
     harness.run_ok();
 
-    assert_eq!(harness.state().visible_pages().first(), Some(&PageIndex(100)));
+    assert_eq!(
+        harness.state().visible_pages().first(),
+        Some(&PageIndex(100))
+    );
 }
 
 #[test]

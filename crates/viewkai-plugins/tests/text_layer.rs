@@ -14,6 +14,10 @@ fn pdfium_once() {
 }
 
 #[test]
+#[allow(
+    clippy::deprecated_semver,
+    deprecated
+)]
 fn text_layer_web_bbox_sanity() {
     pdfium_once();
 
@@ -52,14 +56,14 @@ fn text_layer_web_bbox_sanity() {
     let mut saw_word_rect = false;
     for clipped in output.shapes {
         let egui::epaint::ClippedShape { shape, .. } = clipped;
-        if let egui::Shape::Rect(rect_shape) = shape {
-            if rect_shape.stroke.color == Color32::RED {
-                saw_word_rect = true;
-                assert!(rect_shape.rect.min.x >= page_rect.min.x);
-                assert!(rect_shape.rect.min.y >= page_rect.min.y);
-                assert!(rect_shape.rect.max.x <= page_rect.max.x);
-                assert!(rect_shape.rect.max.y <= page_rect.max.y);
-            }
+        if let egui::Shape::Rect(rect_shape) = shape
+            && rect_shape.stroke.color == Color32::RED
+        {
+            saw_word_rect = true;
+            assert!(rect_shape.rect.min.x >= page_rect.min.x);
+            assert!(rect_shape.rect.min.y >= page_rect.min.y);
+            assert!(rect_shape.rect.max.x <= page_rect.max.x);
+            assert!(rect_shape.rect.max.y <= page_rect.max.y);
         }
     }
 

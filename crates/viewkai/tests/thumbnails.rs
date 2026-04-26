@@ -137,14 +137,18 @@ fn thumbnail_click_actually_scrolls() {
         .build_ui_state(
             |ui, viewer| {
                 let document = viewer.document_arc();
-                viewer.thumbnails_mut().render_panel(ui, document.as_deref());
+                viewer
+                    .thumbnails_mut()
+                    .render_panel(ui, document.as_deref());
                 viewer.show(ui);
             },
             viewer,
         );
 
     harness.run_steps(3);
-    harness.get_by_role_and_label(Role::Button, "Page 2").click();
+    harness
+        .get_by_role_and_label(Role::Button, "Page 2")
+        .click();
     harness.run_ok();
 
     assert_eq!(harness.state().visible_pages().first(), Some(&PageIndex(1)));

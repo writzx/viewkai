@@ -810,7 +810,9 @@ impl eframe::App for App {
                 let current_page = self.current_displayed_page();
                 let can_go_prev = current_page.is_some_and(|page| page > 0);
                 let can_go_next = current_page.is_some_and(|page| page + 1 < self.total_pages);
-                if ui.add_enabled(can_go_prev, egui::Button::new("<")).clicked()
+                if ui
+                    .add_enabled(can_go_prev, egui::Button::new("<"))
+                    .clicked()
                     && let Some(page) = current_page
                 {
                     let target_page = page - 1;
@@ -827,7 +829,9 @@ impl eframe::App for App {
                     response.request_focus();
                 }
                 self.page_input_focused = response.has_focus();
-                if ui.add_enabled(can_go_next, egui::Button::new(">")).clicked()
+                if ui
+                    .add_enabled(can_go_next, egui::Button::new(">"))
+                    .clicked()
                     && let Some(page) = current_page
                 {
                     let target_page = page + 1;

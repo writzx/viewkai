@@ -129,59 +129,6 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn page_rect() -> PointsRect {
-        PointsRect {
-            x: 0.0,
-            y: 0.0,
-            width: 100.0,
-            height: 200.0,
-        }
-    }
-
-    #[test]
-    fn rejects_implausibly_large_glyph_bbox() {
-        assert!(!glyph_bbox_is_plausible(
-            PointsRect {
-                x: 10.0,
-                y: 10.0,
-                width: 60.0,
-                height: 12.0,
-            },
-            page_rect(),
-        ));
-    }
-
-    #[test]
-    fn rejects_out_of_page_glyph_bbox() {
-        assert!(!glyph_bbox_is_plausible(
-            PointsRect {
-                x: -5.0,
-                y: 10.0,
-                width: 8.0,
-                height: 12.0,
-            },
-            page_rect(),
-        ));
-    }
-
-    #[test]
-    fn accepts_glyph_bbox_with_small_page_tolerance() {
-        assert!(glyph_bbox_is_plausible(
-            PointsRect {
-                x: -0.5,
-                y: 10.0,
-                width: 8.0,
-                height: 12.0,
-            },
-            page_rect(),
-        ));
-    }
-}
-
 /// Group glyphs into words and lines using whitespace + y-baseline clustering.
 fn group_glyphs(glyphs: &[GlyphBox], page: PageIndex) -> (Vec<WordSpan>, Vec<LineSpan>) {
     if glyphs.is_empty() {
@@ -317,4 +264,57 @@ fn push_word(
 
     *current_word_start = None;
     *current_word_bbox = None;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn page_rect() -> PointsRect {
+        PointsRect {
+            x: 0.0,
+            y: 0.0,
+            width: 100.0,
+            height: 200.0,
+        }
+    }
+
+    #[test]
+    fn rejects_implausibly_large_glyph_bbox() {
+        assert!(!glyph_bbox_is_plausible(
+            PointsRect {
+                x: 10.0,
+                y: 10.0,
+                width: 60.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
+
+    #[test]
+    fn rejects_out_of_page_glyph_bbox() {
+        assert!(!glyph_bbox_is_plausible(
+            PointsRect {
+                x: -5.0,
+                y: 10.0,
+                width: 8.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
+
+    #[test]
+    fn accepts_glyph_bbox_with_small_page_tolerance() {
+        assert!(glyph_bbox_is_plausible(
+            PointsRect {
+                x: -0.5,
+                y: 10.0,
+                width: 8.0,
+                height: 12.0,
+            },
+            page_rect(),
+        ));
+    }
 }
