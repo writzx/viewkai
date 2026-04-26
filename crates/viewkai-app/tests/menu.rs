@@ -28,7 +28,7 @@ fn file_open_url_opens_modal() {
 }
 
 #[test]
-fn view_menu_exposes_mode_radio() {
+fn view_menu_exposes_mode_submenu() {
     let mut h = common::demo_harness_with_500page();
     h.get_by_label("View").click();
     h.run_ok();
