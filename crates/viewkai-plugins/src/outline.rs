@@ -157,9 +157,7 @@ impl ViewerPlugin for OutlinePlugin {
         "viewkai.outline"
     }
 
-    fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
-        ui.checkbox(&mut self.visible, "Show Outline");
-    }
+    fn show_toolbar(&mut self, _ui: &mut Ui, _ctx: &mut PluginContext<'_>) {}
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
         if let Some(doc) = ctx.document

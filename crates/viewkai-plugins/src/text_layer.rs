@@ -427,9 +427,7 @@ impl ViewerPlugin for TextLayerPlugin {
         }
     }
 
-    fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
-        ui.checkbox(&mut self.debug, "Show text layer");
-    }
+    fn show_toolbar(&mut self, _ui: &mut Ui, _ctx: &mut PluginContext<'_>) {}
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
         if !ctx.library_shortcuts_enabled {

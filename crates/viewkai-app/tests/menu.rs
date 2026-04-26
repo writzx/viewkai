@@ -38,6 +38,11 @@ fn view_debug_toggles_text_layer() {
     let mut h = common::demo_harness_with_hello();
     assert!(!h.state().viewer().text_layer_debug());
 
+    h.get_by_label("View").click();
+    h.run_ok();
+    h.get_by_label("Debug View").click();
+    h.run_ok();
+
     h.get_by_label("Show text layer").click();
     h.run_ok();
     assert!(h.state().viewer().text_layer_debug());

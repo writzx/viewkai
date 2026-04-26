@@ -278,9 +278,7 @@ impl ViewerPlugin for ThumbnailPlugin {
         "viewkai.thumbnail"
     }
 
-    fn show_toolbar(&mut self, ui: &mut Ui, _ctx: &mut PluginContext<'_>) {
-        ui.checkbox(&mut self.visible, "Show Thumbnails");
-    }
+    fn show_toolbar(&mut self, _ui: &mut Ui, _ctx: &mut PluginContext<'_>) {}
 
     fn on_frame_update(&mut self, ctx: &mut PluginContext<'_>) {
         self.cache.tick_frame();

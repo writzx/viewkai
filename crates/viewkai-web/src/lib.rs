@@ -56,6 +56,7 @@ pub struct DemoApp {
     viewer: Viewer,
     load_state: DemoLoadState,
     wasm_state: wasm_state::WasmState,
+    debug_panel_visible: bool,
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
@@ -158,6 +159,7 @@ impl DemoApp {
             viewer: Viewer::new(),
             load_state: DemoLoadState::Idle,
             wasm_state: wasm_state::WasmState::default(),
+            debug_panel_visible: false,
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
@@ -241,6 +243,12 @@ impl DemoApp {
         self.show_about
     }
 
+    /// Returns whether the debug panel is visible.
+    #[must_use]
+    pub fn debug_panel_visible(&self) -> bool {
+        self.debug_panel_visible
+    }
+
     /// Test-only convenience constructor used by harness-based smoke tests.
     #[must_use]
     pub fn new_for_testing() -> Self {
@@ -248,6 +256,7 @@ impl DemoApp {
             viewer: Viewer::new(),
             load_state: DemoLoadState::Idle,
             wasm_state: wasm_state::WasmState::default(),
+            debug_panel_visible: false,
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
@@ -580,6 +589,19 @@ impl DemoApp {
         }
     }
 
+    fn show_debug_panel_contents(&mut self, ui: &mut egui::Ui) {
+        let mut debug = self.viewer.text_layer_debug();
+        if ui.checkbox(&mut debug, "Show text layer").clicked() {
+            self.viewer.set_text_layer_debug(debug);
+        }
+        ui.separator();
+        if let Some(info) = &self.debug_info {
+            ui.label(info);
+        } else {
+            ui.label("No document loaded");
+        }
+    }
+
     fn show_menu_bar(&mut self, ui: &mut egui::Ui) {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
@@ -629,12 +651,7 @@ impl DemoApp {
                         ui.close();
                     }
                 });
-                ui.menu_button("Debug", |ui| {
-                    let mut debug = self.viewer.text_layer_debug();
-                    if ui.checkbox(&mut debug, "Show Text Layer").clicked() {
-                        self.viewer.set_text_layer_debug(debug);
-                    }
-                });
+                ui.checkbox(&mut self.debug_panel_visible, "Debug View");
             });
 
             ui.menu_button("Help", |ui| {
@@ -771,19 +788,15 @@ impl eframe::App for DemoApp {
             });
         });
 
-        egui::Panel::bottom("web_debug")
-            .resizable(true)
-            .show_inside(ui, |ui| {
-                egui::CollapsingHeader::new("Debug")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        if let Some(info) = &self.debug_info {
-                            ui.label(info);
-                        } else {
-                            ui.label("No document loaded");
-                        }
-                    });
-            });
+        if self.debug_panel_visible {
+            egui::Panel::bottom("web_debug")
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                    egui::CollapsingHeader::new("Debug")
+                        .default_open(true)
+                        .show(ui, |ui| self.show_debug_panel_contents(ui));
+                });
+        }
 
         if let Some(active_tab) = self.active_sidebar_tab() {
             egui::Panel::left("viewkai.sidebar")
