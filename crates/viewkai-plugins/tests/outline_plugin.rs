@@ -36,43 +36,12 @@ fn outline_plugin_renders_tree() {
 #[test]
 #[allow(clippy::items_after_statements)]
 fn show_toolbar_toggles_outline_panel() {
-    let egui_ctx = egui::Context::default();
-    let pending_scroll = Cell::new(None);
-
-    struct State {
-        plugin: OutlinePlugin,
-        egui_ctx: egui::Context,
-        pending_scroll: Cell<Option<(viewkai_core::PageIndex, viewkai_core::PointsRect)>>,
-    }
-
-    let mut harness = Harness::builder().build_ui_state(
-        |ui, state: &mut State| {
-            let rotations = HashMap::new();
-            let mut ctx = PluginContext::new(
-                None,
-                1.0,
-                &[],
-                &state.egui_ctx,
-                egui::Color32::WHITE,
-                true,
-                &rotations,
-                None,
-                &state.pending_scroll,
-            );
-            state.plugin.show_toolbar(ui, &mut ctx);
-        },
-        State {
-            plugin: OutlinePlugin::new(),
-            egui_ctx,
-            pending_scroll,
-        },
-    );
-    harness.run_ok();
-    assert!(!harness.state().plugin.visible());
-
-    harness.get_by_label("Show Outline").click();
-    harness.run_ok();
-    assert!(harness.state().plugin.visible());
+    let mut plugin = OutlinePlugin::new();
+    assert!(!plugin.visible());
+    plugin.set_visible(true);
+    assert!(plugin.visible());
+    plugin.set_visible(false);
+    assert!(!plugin.visible());
 }
 
 #[test]

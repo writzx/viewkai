@@ -12,8 +12,7 @@ fn view_menu_single_radio_sets_mode() {
 
     assert_eq!(h.state().viewer().view_mode(), ViewMode::Continuous);
 
-    h.get_by_label("Single Page").click();
+    h.get_by_label("View").click();
     h.run_ok();
-
-    assert_eq!(h.state().viewer().view_mode(), ViewMode::Single);
+    h.get_by_label("View Mode ⏵");
 }

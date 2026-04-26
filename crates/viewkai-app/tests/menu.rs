@@ -29,8 +29,10 @@ fn file_open_url_opens_modal() {
 
 #[test]
 fn view_menu_exposes_mode_radio() {
-    let h = common::demo_harness_with_500page();
-    h.get_by_label("Single Page");
+    let mut h = common::demo_harness_with_500page();
+    h.get_by_label("View").click();
+    h.run_ok();
+    h.get_by_label("View Mode ⏵");
 }
 
 #[test]

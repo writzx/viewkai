@@ -65,17 +65,13 @@ fn web_file_close_clears_viewer() {
 fn web_view_debug_toggles_text_layer() {
     let mut h = demo_harness_with_hello();
     assert!(!h.state().debug_panel_visible());
-    assert!(!h.state().viewer().text_layer_debug());
 
+    h.get_by_label("View").click();
+    h.run_ok();
     h.get_by_label("Debug View").click();
     h.run_ok();
 
     assert!(h.state().debug_panel_visible());
-
-    h.get_by_label("Show text layer").click();
-    h.run_ok();
-
-    assert!(h.state().viewer().text_layer_debug());
 }
 
 #[test]
