@@ -14,10 +14,7 @@ fn pdfium_once() {
 }
 
 #[test]
-#[allow(
-    clippy::deprecated_semver,
-    deprecated
-)]
+#[allow(clippy::deprecated_semver, deprecated)]
 fn text_layer_web_bbox_sanity() {
     pdfium_once();
 
