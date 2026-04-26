@@ -1,6 +1,7 @@
 //! Search plugin: full-text search with Ctrl+F overlay and match highlighting.
 
 use egui::{Area, Color32, Context, Id, Key, KeyboardShortcut, Modifiers, Order, Ui};
+use egui_phosphor::regular;
 use viewkai_core::{PageIndex, SearchMatch, SearchQuery, SearchState, forward_rotate_rect};
 
 use crate::{PluginContext, ViewerPlugin, sealed::Sealed};
@@ -328,15 +329,15 @@ impl ViewerPlugin for SearchPlugin {
                             }
                         }
 
-                        if ui.button("▲").clicked() {
+                        if ui.button("<").on_hover_text(regular::CARET_LEFT).clicked() {
                             go_prev = true;
                         }
 
-                        if ui.button("▼").clicked() {
+                        if ui.button(">").on_hover_text(regular::CARET_RIGHT).clicked() {
                             go_next = true;
                         }
 
-                        if ui.button("✕").clicked() {
+                        if ui.button("x").on_hover_text(regular::X).clicked() {
                             close = true;
                         }
                     });

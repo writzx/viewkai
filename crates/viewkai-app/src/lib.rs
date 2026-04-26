@@ -1,6 +1,7 @@
 //! Native PDF viewer application built on `viewkai`.
 
 use eframe::egui;
+use egui_phosphor::Variant;
 use std::sync::{Arc, Mutex};
 use viewkai::{RotationDelta, ViewMode, Viewer, zoom::ZoomState};
 use viewkai_core::PageIndex;
@@ -48,6 +49,7 @@ pub struct App {
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
+    last_displayed_page: Option<usize>,
     total_pages: usize,
     sidebar_tab: SidebarTab,
     current_document_name: Option<String>,
@@ -178,7 +180,7 @@ impl App {
     /// Create a new native app instance.
     #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let _ = cc;
+        configure_icon_fonts(&cc.egui_ctx);
 
         Self {
             viewer: Viewer::new(),
@@ -187,6 +189,7 @@ impl App {
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
+            last_displayed_page: None,
             total_pages: 0,
             sidebar_tab: SidebarTab::Outline,
             current_document_name: None,
@@ -220,6 +223,7 @@ impl App {
                 self.viewer.clear();
                 self.load_state = LoadState::Idle;
                 self.debug_info = None;
+                self.last_displayed_page = None;
                 self.total_pages = 0;
                 self.page_input.clear();
                 self.current_document_name = None;
@@ -276,6 +280,17 @@ impl App {
         self.debug_panel_visible
     }
 
+    /// Returns the current page-input buffer.
+    #[must_use]
+    pub fn page_input_value(&self) -> &str {
+        &self.page_input
+    }
+
+    /// Test helper scrolling to a page through the embedded viewer.
+    pub fn scroll_to_page_for_testing(&mut self, page_idx: usize) {
+        self.viewer.scroll_to_page(page_idx);
+    }
+
     fn describe_pdf(bytes: &[u8]) -> Result<String, String> {
         let doc = Document::from_bytes(bytes.to_vec()).map_err(|err| err.to_string())?;
         let size = doc.page_size(PageIndex(0)).map_or_else(
@@ -294,6 +309,7 @@ impl App {
         match self.viewer.load_bytes(bytes.to_owned()) {
             Ok(()) => {
                 self.total_pages = self.viewer.page_count();
+                self.last_displayed_page = (self.total_pages > 0).then_some(0);
                 self.page_input = if self.total_pages > 0 {
                     "1".to_owned()
                 } else {
@@ -308,6 +324,7 @@ impl App {
             }
             Err(err) => {
                 self.debug_info = None;
+                self.last_displayed_page = None;
                 self.total_pages = 0;
                 self.page_input.clear();
                 self.current_document_name = None;
@@ -472,6 +489,40 @@ impl App {
         }
     }
 
+    fn current_displayed_page(&self) -> Option<usize> {
+        self.viewer
+            .visible_pages()
+            .first()
+            .map(|page| page.0)
+            .or(self.last_displayed_page)
+            .or((self.total_pages > 0).then_some(0))
+    }
+
+    fn sync_page_input_from_visible_page(&mut self, input_focused: bool) {
+        let visible_page = self.viewer.visible_pages().first().map(|page| page.0);
+        self.last_displayed_page = visible_page.or(self.last_displayed_page);
+
+        if !input_focused {
+            self.page_input = visible_page
+                .map(|page| (page + 1).to_string())
+                .or_else(|| (self.total_pages > 0).then(|| "1".to_owned()))
+                .unwrap_or_default();
+        }
+    }
+
+    fn view_mode_label(mode: ViewMode) -> &'static str {
+        match mode {
+            ViewMode::Single => "Single Page",
+            ViewMode::Continuous => "Continuous",
+            ViewMode::Spread {
+                cover_separate: true,
+            } => "Spread (Cover Alone)",
+            ViewMode::Spread {
+                cover_separate: false,
+            } => "Spread (All Pairs)",
+        }
+    }
+
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
         // IMPORTANT: Most-specific shortcuts (more modifiers) MUST be consumed first.
         // egui uses inclusive modifier matching: Ctrl+O matches when Ctrl+Shift+O is pressed.
@@ -544,13 +595,18 @@ impl App {
     }
 
     fn view_mode_selector_ui(&mut self, ui: &mut egui::Ui) {
-        let mut selected = self.viewer.view_mode();
-        for (label, mode) in VIEW_MODE_OPTIONS {
-            ui.radio_value(&mut selected, mode, label);
-        }
-        if selected != self.viewer.view_mode() {
-            self.viewer.set_view_mode(selected);
-        }
+        egui::ComboBox::from_id_salt("view_mode_combo")
+            .selected_text(Self::view_mode_label(self.viewer.view_mode()))
+            .show_ui(ui, |ui| {
+                for (label, mode) in VIEW_MODE_OPTIONS {
+                    if ui
+                        .selectable_label(self.viewer.view_mode() == mode, label)
+                        .clicked()
+                    {
+                        self.viewer.set_view_mode(mode);
+                    }
+                }
+            });
     }
 
     fn view_mode_menu_ui(&mut self, ui: &mut egui::Ui) {
@@ -731,6 +787,7 @@ impl eframe::App for App {
         self.handle_shortcuts(&ctx);
         self.poll_pending_load();
         self.sync_viewport_title(&ctx);
+        self.sync_page_input_from_visible_page(self.page_input_focused);
 
         egui::Panel::top("menu_bar").show_inside(ui, |ui| {
             self.show_menu_bar(ui);
@@ -750,6 +807,17 @@ impl eframe::App for App {
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Page:");
+                let current_page = self.current_displayed_page();
+                let can_go_prev = current_page.is_some_and(|page| page > 0);
+                let can_go_next = current_page.is_some_and(|page| page + 1 < self.total_pages);
+                if ui.add_enabled(can_go_prev, egui::Button::new("<")).clicked()
+                    && let Some(page) = current_page
+                {
+                    let target_page = page - 1;
+                    self.viewer.scroll_to_page(target_page);
+                    self.last_displayed_page = Some(target_page);
+                    self.page_input = (target_page + 1).to_string();
+                }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
                         .desired_width(50.0)
@@ -757,7 +825,15 @@ impl eframe::App for App {
                 );
                 if self.page_input_focused {
                     response.request_focus();
-                    self.page_input_focused = false;
+                }
+                self.page_input_focused = response.has_focus();
+                if ui.add_enabled(can_go_next, egui::Button::new(">")).clicked()
+                    && let Some(page) = current_page
+                {
+                    let target_page = page + 1;
+                    self.viewer.scroll_to_page(target_page);
+                    self.last_displayed_page = Some(target_page);
+                    self.page_input = (target_page + 1).to_string();
                 }
                 ui.label(format!("of {}", self.total_pages));
 
@@ -859,6 +935,12 @@ impl eframe::App for App {
         self.show_about_window(&ctx);
         self.show_url_window(&ctx);
     }
+}
+
+fn configure_icon_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    egui_phosphor::add_to_fonts(&mut fonts, Variant::Regular);
+    ctx.set_fonts(fonts);
 }
 
 fn fetch_url_native(

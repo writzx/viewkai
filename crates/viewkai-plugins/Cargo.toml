@@ -16,6 +16,7 @@ test-support = []
 
 [dependencies]
 egui = { workspace = true }
+egui-phosphor = { workspace = true }
 viewkai-core = { path = "../viewkai-core" }
 viewkai-engine = { path = "../viewkai-engine" }
 

@@ -10,6 +10,7 @@ authors = ["Writwick"]
 
 [workspace.dependencies]
 egui = "0.34"
+egui-phosphor = { version = "0.12", features = ["regular"] }
 pdfium-render = { version = "0.9", features = ["thread_safe"] }
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }

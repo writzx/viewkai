@@ -1,6 +1,7 @@
 //! Web demo application for viewkai.
 
 use eframe::egui;
+use egui_phosphor::Variant;
 use std::sync::{Arc, Mutex};
 use viewkai::{RotationDelta, ViewMode, Viewer, zoom::ZoomState};
 use viewkai_core::PageIndex;
@@ -60,6 +61,7 @@ pub struct DemoApp {
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
+    last_displayed_page: Option<usize>,
     total_pages: usize,
     sidebar_tab: SidebarTab,
     current_document_name: Option<String>,
@@ -153,7 +155,7 @@ impl DemoApp {
     /// Create a new web demo app instance.
     #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let _ = cc;
+        configure_icon_fonts(&cc.egui_ctx);
 
         Self {
             viewer: Viewer::new(),
@@ -163,6 +165,7 @@ impl DemoApp {
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
+            last_displayed_page: None,
             total_pages: 0,
             sidebar_tab: SidebarTab::Outline,
             current_document_name: None,
@@ -195,6 +198,7 @@ impl DemoApp {
                 self.viewer.clear();
                 self.load_state = DemoLoadState::Idle;
                 self.debug_info = None;
+                self.last_displayed_page = None;
                 self.total_pages = 0;
                 self.page_input.clear();
                 self.current_document_name = None;
@@ -260,6 +264,7 @@ impl DemoApp {
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
+            last_displayed_page: None,
             total_pages: 0,
             sidebar_tab: SidebarTab::Outline,
             current_document_name: None,
@@ -332,6 +337,7 @@ impl DemoApp {
         match self.viewer.load_bytes(bytes.to_owned()) {
             Ok(()) => {
                 self.total_pages = self.viewer.page_count();
+                self.last_displayed_page = (self.total_pages > 0).then_some(0);
                 self.page_input = if self.total_pages > 0 {
                     "1".to_owned()
                 } else {
@@ -346,6 +352,7 @@ impl DemoApp {
             }
             Err(err) => {
                 self.debug_info = None;
+                self.last_displayed_page = None;
                 self.total_pages = 0;
                 self.page_input.clear();
                 self.current_document_name = None;
@@ -503,6 +510,27 @@ impl DemoApp {
             && page_num <= self.total_pages
         {
             self.viewer.scroll_to_page(page_num - 1);
+        }
+    }
+
+    fn current_displayed_page(&self) -> Option<usize> {
+        self.viewer
+            .visible_pages()
+            .first()
+            .map(|page| page.0)
+            .or(self.last_displayed_page)
+            .or((self.total_pages > 0).then_some(0))
+    }
+
+    fn sync_page_input_from_visible_page(&mut self, input_focused: bool) {
+        let visible_page = self.viewer.visible_pages().first().map(|page| page.0);
+        self.last_displayed_page = visible_page.or(self.last_displayed_page);
+
+        if !input_focused {
+            self.page_input = visible_page
+                .map(|page| (page + 1).to_string())
+                .or_else(|| (self.total_pages > 0).then(|| "1".to_owned()))
+                .unwrap_or_default();
         }
     }
 
@@ -752,6 +780,7 @@ impl eframe::App for DemoApp {
         self.handle_shortcuts(&ctx);
         self.poll_pending_load();
         self.sync_viewport_title(&ctx);
+        self.sync_page_input_from_visible_page(self.page_input_focused);
 
         egui::Panel::top("menu_bar").show_inside(ui, |ui| {
             self.show_menu_bar(ui);
@@ -771,6 +800,17 @@ impl eframe::App for DemoApp {
         egui::Panel::bottom("page_nav").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Page:");
+                let current_page = self.current_displayed_page();
+                let can_go_prev = current_page.is_some_and(|page| page > 0);
+                let can_go_next = current_page.is_some_and(|page| page + 1 < self.total_pages);
+                if ui.add_enabled(can_go_prev, egui::Button::new("<")).clicked()
+                    && let Some(page) = current_page
+                {
+                    let target_page = page - 1;
+                    self.viewer.scroll_to_page(target_page);
+                    self.last_displayed_page = Some(target_page);
+                    self.page_input = (target_page + 1).to_string();
+                }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
                         .desired_width(50.0)
@@ -778,7 +818,15 @@ impl eframe::App for DemoApp {
                 );
                 if self.page_input_focused {
                     response.request_focus();
-                    self.page_input_focused = false;
+                }
+                self.page_input_focused = response.has_focus();
+                if ui.add_enabled(can_go_next, egui::Button::new(">")).clicked()
+                    && let Some(page) = current_page
+                {
+                    let target_page = page + 1;
+                    self.viewer.scroll_to_page(target_page);
+                    self.last_displayed_page = Some(target_page);
+                    self.page_input = (target_page + 1).to_string();
                 }
                 ui.label(format!("of {}", self.total_pages));
 
@@ -885,6 +933,12 @@ impl eframe::App for DemoApp {
         self.show_about_window(&ctx);
         self.show_url_window(&ctx);
     }
+}
+
+fn configure_icon_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    egui_phosphor::add_to_fonts(&mut fonts, Variant::Regular);
+    ctx.set_fonts(fonts);
 }
 
 #[cfg(target_arch = "wasm32")]
