@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] — 2026-04-26
+
+### Fixed
+- Text-layer web fix: glyph bbox plausibility filtering (H2 confirmed: bad pdfium-WASM bounds)
+- 100% zoom DPR crispness via `zoom_to_dpi_bucket_with_dpr` internal helper
+- Scroll coordinate fix: `content_origin` offset in `handle_pending_scroll` (fixes thumbnail click + page-number input)
+- Find overlay: `<`, `>`, `x` ASCII fallback (no more tofu squares)
+
+### Changed
+- Thumbnail visual polish: removed captions, clickable styling, active-page indicator, scrollbar gutter
+- Mode selector: native toolbar now uses ComboBox (like web)
+- Page nav: `<` / `>` buttons and auto-updating page input
+- Menu restructure: `View → Debug View` toggle; text-layer toggle moved to debug panel; toolbar checkboxes removed
+
+### Added
+- `egui-phosphor` v0.12 added as runtime dependency for icons
+
 ## [0.2.0] — 2026-04-21 — Application Shell
 
 ### Phase 0 — Layout engine refactor + baseline metrics
