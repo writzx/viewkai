@@ -1369,7 +1369,7 @@ impl Viewer {
                         None
                     };
                     if let Some(target_rect) = target_rect {
-            ui.scroll_to_rect(target_rect, Some(egui::Align::TOP));
+                        ui.scroll_to_rect(target_rect, Some(egui::Align::TOP));
                     }
                 }
 
