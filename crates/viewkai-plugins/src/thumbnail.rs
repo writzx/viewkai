@@ -162,6 +162,9 @@ impl ThumbnailPlugin {
         egui::ScrollArea::vertical()
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
             .show(ui, |ui| {
+                // Reserve gutter space so scrollbar doesn't overlap thumbnails.
+                // egui scrollbar is ~8px + margins; 12px is a safe conservative gutter.
+                ui.set_width((ui.available_width() - 12.0).max(1.0));
                 for page_idx in 0..doc.page_count() {
                     let page = PageIndex(page_idx);
                     let texture = self.thumbnail_texture(ui, doc, page, PdfPageRotation::None);

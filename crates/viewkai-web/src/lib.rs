@@ -818,9 +818,6 @@ impl eframe::App for DemoApp {
                         .desired_width(50.0)
                         .hint_text("1"),
                 );
-                if self.page_input_focused {
-                    response.request_focus();
-                }
                 self.page_input_focused = response.has_focus();
                 if ui
                     .add_enabled(can_go_next, egui::Button::new(">"))
@@ -834,7 +831,7 @@ impl eframe::App for DemoApp {
                 }
                 ui.label(format!("of {}", self.total_pages));
 
-                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                if self.page_input_focused && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     self.jump_to_page_input();
                 }
             });
