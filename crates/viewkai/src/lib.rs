@@ -1902,7 +1902,7 @@ impl Viewer {
                 rotation,
                 page_size,
             );
-            ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
+            ui.scroll_to_rect(target_rect, Some(egui::Align::TOP));
         }
     }
 
