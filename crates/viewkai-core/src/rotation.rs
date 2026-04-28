@@ -80,14 +80,14 @@ pub fn inverse_rotate_point(
         PdfPageRotation::None => point,
         PdfPageRotation::R90 => PointsPos {
             x: point.y,
-            y: page_size.width_pt - point.x,
+            y: page_size.height_pt - point.x,
         },
         PdfPageRotation::R180 => PointsPos {
             x: page_size.width_pt - point.x,
             y: page_size.height_pt - point.y,
         },
         PdfPageRotation::R270 => PointsPos {
-            x: page_size.height_pt - point.y,
+            x: page_size.width_pt - point.y,
             y: point.x,
         },
     }
@@ -103,7 +103,7 @@ pub fn forward_rotate_point(
     match rotation {
         PdfPageRotation::None => point,
         PdfPageRotation::R90 => PointsPos {
-            x: page_size.width_pt - point.y,
+            x: page_size.height_pt - point.y,
             y: point.x,
         },
         PdfPageRotation::R180 => PointsPos {
@@ -112,7 +112,7 @@ pub fn forward_rotate_point(
         },
         PdfPageRotation::R270 => PointsPos {
             x: point.y,
-            y: page_size.height_pt - point.x,
+            y: page_size.width_pt - point.x,
         },
     }
 }

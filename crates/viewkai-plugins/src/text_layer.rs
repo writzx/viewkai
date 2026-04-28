@@ -27,7 +27,7 @@ pub struct TextLayerPlugin {
 impl Default for TextLayerPlugin {
     fn default() -> Self {
         Self {
-            debug: true,
+            debug: false,
             selection: None,
             selection_anchor: None,
         }
@@ -387,7 +387,7 @@ impl ViewerPlugin for TextLayerPlugin {
                     screen_rect,
                     0.0,
                     Stroke::new(1.0, Color32::RED),
-                    egui::StrokeKind::Middle,
+                    egui::StrokeKind::Outside,
                 );
             }
         }
@@ -557,11 +557,11 @@ mod tests {
     #[test]
     fn debug_toggle_roundtrips() {
         let mut plugin = TextLayerPlugin::new();
-        assert!(plugin.debug());
-        plugin.set_debug(false);
         assert!(!plugin.debug());
         plugin.set_debug(true);
         assert!(plugin.debug());
+        plugin.set_debug(false);
+        assert!(!plugin.debug());
     }
 
     #[test]

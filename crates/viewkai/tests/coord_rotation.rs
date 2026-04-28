@@ -26,7 +26,7 @@ fn inverse_rotate_point_r90_maps_to_pdf_coords() {
             PdfPageRotation::R90,
             page_size()
         ),
-        PointsPos { x: 50.0, y: 512.0 }
+        PointsPos { x: 50.0, y: 692.0 }
     );
 }
 
@@ -50,6 +50,6 @@ fn inverse_rotate_point_r270_maps_to_pdf_coords() {
             PdfPageRotation::R270,
             page_size()
         ),
-        PointsPos { x: 742.0, y: 100.0 }
+        PointsPos { x: 562.0, y: 100.0 }
     );
 }
