@@ -37,7 +37,7 @@ fn outline_plugin_renders_tree() {
 #[allow(clippy::items_after_statements)]
 fn show_toolbar_toggles_outline_panel() {
     let mut plugin = OutlinePlugin::new();
-    assert!(!plugin.visible());
+    assert!(plugin.visible());
     plugin.set_visible(true);
     assert!(plugin.visible());
     plugin.set_visible(false);
