@@ -29,7 +29,7 @@ fn shortcut_ctrl_0_resets_zoom() {
 
     h.key_press_modifiers(ctrl(), egui::Key::Equals);
     h.step();
-    assert_eq!(h.state().viewer().zoom(), ZoomState::Discrete(1.25));
+    assert_eq!(h.state().viewer().zoom(), ZoomState::Custom(1.25));
 
     h.key_press_modifiers(ctrl(), egui::Key::Num0);
     h.step();
@@ -71,15 +71,15 @@ fn shortcut_ctrl_plus_minus_steps_zoom() {
 
     h.key_press_modifiers(ctrl(), egui::Key::Equals);
     h.step();
-    assert_eq!(h.state().viewer().zoom(), ZoomState::Discrete(1.25));
+    assert_eq!(h.state().viewer().zoom(), ZoomState::Custom(1.25));
 
     h.key_press_modifiers(ctrl(), egui::Key::Minus);
     h.step();
-    assert_eq!(h.state().viewer().zoom(), ZoomState::Discrete(1.0));
+    assert_eq!(h.state().viewer().zoom(), ZoomState::Custom(1.0));
 
     h.key_press_modifiers(ctrl(), egui::Key::Minus);
     h.step();
-    assert_eq!(h.state().viewer().zoom(), ZoomState::Discrete(0.75));
+    assert_eq!(h.state().viewer().zoom(), ZoomState::Custom(0.75));
 }
 
 #[test]

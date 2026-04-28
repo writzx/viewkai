@@ -19,6 +19,9 @@ fn page_input_auto_update() {
     h.state_mut().scroll_to_page_for_testing(4);
     h.run_ok();
     h.run_ok();
+    h.run_ok();
+    h.run_ok();
+    h.run_ok();
 
     let expected = h
         .state()

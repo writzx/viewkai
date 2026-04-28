@@ -24,7 +24,8 @@ fn zoom_label(zoom: ZoomState) -> &'static str {
     match zoom {
         ZoomState::FitWidth => "Fit Width",
         ZoomState::FitPage => "Fit Page",
-        ZoomState::Discrete(z) | ZoomState::Custom(z) => zoom_levels()
+        ZoomState::Custom(_) => "Custom",
+        ZoomState::Discrete(z) => zoom_levels()
             .iter()
             .find(|(_, lvl)| matches!(lvl, ZoomState::Discrete(d) if (z - d).abs() < ZOOM_EPSILON))
             .map_or("Custom", |(label, _)| *label),
@@ -40,7 +41,7 @@ pub(crate) fn step_zoom_up(current: ZoomState) -> ZoomState {
         .iter()
         .find(|&&level| level > z + ZOOM_EPSILON)
         .copied();
-    ZoomState::Discrete(next.unwrap_or(4.0))
+    ZoomState::Custom(next.unwrap_or(4.0))
 }
 
 pub(crate) fn step_zoom_down(current: ZoomState) -> ZoomState {
@@ -53,7 +54,7 @@ pub(crate) fn step_zoom_down(current: ZoomState) -> ZoomState {
         .rev()
         .find(|&&level| level < z - ZOOM_EPSILON)
         .copied();
-    ZoomState::Discrete(previous.unwrap_or(0.25))
+    ZoomState::Custom(previous.unwrap_or(0.25))
 }
 
 pub(crate) fn zoom_toolbar_ui(ui: &mut egui::Ui, viewer: &mut Viewer) -> bool {

@@ -49,6 +49,9 @@ pub struct App {
     debug_info: Option<String>,
     page_input: String,
     page_input_focused: bool,
+    page_input_debounce_until: f64,
+    page_input_pending_page: Option<usize>,
+    suppress_page_input_sync: bool,
     last_displayed_page: Option<usize>,
     total_pages: usize,
     sidebar_tab: SidebarTab,
@@ -189,6 +192,9 @@ impl App {
             debug_info: None,
             page_input: String::new(),
             page_input_focused: false,
+            page_input_debounce_until: 0.0,
+            page_input_pending_page: None,
+            suppress_page_input_sync: false,
             last_displayed_page: None,
             total_pages: 0,
             sidebar_tab: SidebarTab::Outline,
@@ -486,6 +492,7 @@ impl App {
             && page_num <= self.total_pages
         {
             self.viewer.scroll_to_page(page_num - 1);
+            self.suppress_page_input_sync = true;
         }
     }
 
@@ -498,16 +505,39 @@ impl App {
             .or((self.total_pages > 0).then_some(0))
     }
 
-    fn sync_page_input_from_visible_page(&mut self, input_focused: bool) {
+    fn sync_page_input_from_visible_page(&mut self, input_focused: bool, now: f64) {
         let visible_page = self.viewer.visible_pages().first().map(|page| page.0);
-        self.last_displayed_page = visible_page.or(self.last_displayed_page);
+        let last_page = self.last_displayed_page;
 
-        if !input_focused {
-            self.page_input = visible_page
-                .map(|page| (page + 1).to_string())
-                .or_else(|| (self.total_pages > 0).then(|| "1".to_owned()))
-                .unwrap_or_default();
+        if input_focused {
+            self.last_displayed_page = visible_page.or(self.last_displayed_page);
+            return;
         }
+
+        if self.suppress_page_input_sync {
+            self.suppress_page_input_sync = false;
+            self.page_input_pending_page = None;
+            self.last_displayed_page = visible_page.or(self.last_displayed_page);
+            return;
+        }
+
+        if let Some(new_page) = visible_page {
+            if Some(new_page) != self.page_input_pending_page
+                && Some(new_page) != last_page
+            {
+                self.page_input_pending_page = Some(new_page);
+                self.page_input_debounce_until = now + 0.3;
+            }
+        }
+
+        if let Some(pending_page) = self.page_input_pending_page {
+            if now >= self.page_input_debounce_until {
+                self.page_input = (pending_page + 1).to_string();
+                self.page_input_pending_page = None;
+            }
+        }
+
+        self.last_displayed_page = visible_page.or(self.last_displayed_page);
     }
 
     fn view_mode_label(mode: ViewMode) -> &'static str {
@@ -784,10 +814,11 @@ impl eframe::App for App {
     #[allow(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        let now = ui.ctx().input(|i| i.time);
         self.handle_shortcuts(&ctx);
         self.poll_pending_load();
         self.sync_viewport_title(&ctx);
-        self.sync_page_input_from_visible_page(self.page_input_focused);
+        self.sync_page_input_from_visible_page(self.page_input_focused, now);
 
         egui::Panel::top("menu_bar").show_inside(ui, |ui| {
             self.show_menu_bar(ui);
@@ -819,6 +850,7 @@ impl eframe::App for App {
                     self.viewer.scroll_to_page(target_page);
                     self.last_displayed_page = Some(target_page);
                     self.page_input = (target_page + 1).to_string();
+                    self.suppress_page_input_sync = true;
                 }
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.page_input)
@@ -838,13 +870,14 @@ impl eframe::App for App {
                     self.viewer.scroll_to_page(target_page);
                     self.last_displayed_page = Some(target_page);
                     self.page_input = (target_page + 1).to_string();
+                    self.suppress_page_input_sync = true;
                 }
                 ui.label(format!("of {}", self.total_pages));
 
                 if submit_page {
                     self.jump_to_page_input();
                 } else if response.lost_focus() {
-                    self.sync_page_input_from_visible_page(false);
+                    self.sync_page_input_from_visible_page(false, now);
                 }
             });
         });
@@ -928,6 +961,7 @@ impl eframe::App for App {
                 self.apply_zoom_factor(pinch_delta);
             }
 
+            let had_thumbnail_click = self.viewer.thumbnails().pending_click_page().is_some();
             match &self.load_state {
                 LoadState::Loaded | LoadState::Idle => self.viewer.show(ui),
                 LoadState::AcquiringBytes { label } => Self::show_loading(ui, label),
@@ -935,6 +969,9 @@ impl eframe::App for App {
                     let msg = msg.clone();
                     self.show_failure(ui, &msg);
                 }
+            }
+            if had_thumbnail_click {
+                self.suppress_page_input_sync = true;
             }
         });
 
