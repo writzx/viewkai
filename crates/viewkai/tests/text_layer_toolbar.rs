@@ -16,11 +16,11 @@ fn checkbox_toggles_plugin_state() {
     let mut viewer = Viewer::new();
     viewer.load_bytes(bytes).expect("load hello.pdf");
 
-    assert!(!viewer.text_layer().debug());
-    viewer.set_text_layer_debug(true);
     assert!(viewer.text_layer().debug());
     viewer.set_text_layer_debug(false);
     assert!(!viewer.text_layer().debug());
+    viewer.set_text_layer_debug(true);
+    assert!(viewer.text_layer().debug());
 }
 
 #[test]

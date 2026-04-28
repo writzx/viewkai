@@ -104,7 +104,11 @@ pub fn extract_page_text(doc: &Document, page_idx: PageIndex) -> Result<PageText
             continue;
         }
 
-        let Ok(rect) = char_obj.tight_bounds() else {
+        #[cfg(target_arch = "wasm32")]
+        let rect = char_obj.loose_bounds();
+        #[cfg(not(target_arch = "wasm32"))]
+        let rect = char_obj.tight_bounds();
+        let Ok(rect) = rect else {
             continue;
         };
         let bbox = pdf_rect_to_viewkai(rect, page_height_pt);

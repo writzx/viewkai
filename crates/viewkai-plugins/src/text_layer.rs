@@ -373,14 +373,8 @@ impl ViewerPlugin for TextLayerPlugin {
             .min;
         let zoom = ctx.zoom;
 
-        ui.painter().rect_filled(
-            egui::Rect::from_center_size(page_origin, egui::vec2(20.0, 20.0)),
-            0.0,
-            Color32::BLUE,
-        );
-
         if self.debug {
-            for (i, word) in text.words.iter().enumerate() {
+            for word in &text.words {
                 let Some(word_bbox) = clip_rect_to_page(word.bbox, page_rect) else {
                     continue;
                 };
@@ -389,12 +383,6 @@ impl ViewerPlugin for TextLayerPlugin {
                     page_origin,
                     zoom,
                 );
-
-                #[cfg(target_arch = "wasm32")]
-                if i < 5 {
-                    web_sys::console::log_1(&format!("TEXT_LAYER: word[{}] raw={:?} clipped={:?} screen={:?}", i, word.bbox, word_bbox, screen_rect).into());
-                }
-
                 ui.painter().rect_stroke(
                     screen_rect,
                     0.0,
@@ -569,11 +557,11 @@ mod tests {
     #[test]
     fn debug_toggle_roundtrips() {
         let mut plugin = TextLayerPlugin::new();
-        assert!(!plugin.debug());
-        plugin.set_debug(true);
         assert!(plugin.debug());
         plugin.set_debug(false);
         assert!(!plugin.debug());
+        plugin.set_debug(true);
+        assert!(plugin.debug());
     }
 
     #[test]
