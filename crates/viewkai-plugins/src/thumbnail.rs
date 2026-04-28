@@ -207,6 +207,8 @@ impl ThumbnailPlugin {
                                 Color32::from_gray(60),
                             );
                         }
+
+                        Self::render_page_number_overlay(ui, rect, page_idx);
                     });
                     let response = ui.interact(
                         inner.response.rect,
@@ -281,6 +283,30 @@ impl ThumbnailPlugin {
             })
     }
 
+    fn render_page_number_overlay(ui: &Ui, rect: egui::Rect, page_idx: usize) {
+        let text = format!("{}", page_idx + 1);
+        let font_id = egui::TextStyle::Small.resolve(ui.style());
+        let galley = ui
+            .painter()
+            .layout_no_wrap(text.clone(), font_id.clone(), Color32::WHITE);
+        let text_rect = egui::Rect::from_min_max(
+            rect.right_bottom() - egui::vec2(4.0, 4.0) - galley.size(),
+            rect.right_bottom() - egui::vec2(4.0, 4.0),
+        );
+        ui.painter().rect_filled(
+            text_rect.expand(2.0),
+            3.0,
+            Color32::from_rgba_unmultiplied(0, 0, 0, 160),
+        );
+        ui.painter().text(
+            rect.right_bottom() - egui::vec2(4.0, 4.0),
+            egui::Align2::RIGHT_BOTTOM,
+            text,
+            font_id,
+            Color32::WHITE,
+        );
+    }
+
     fn reset_document_state(&mut self) {
         self.cache.clear();
         self.pending_pages.clear();
@@ -309,7 +335,7 @@ impl ThumbnailPlugin {
 impl Default for ThumbnailPlugin {
     fn default() -> Self {
         Self {
-            visible: false,
+            visible: true,
             cache: ThumbnailCache::new(DEFAULT_THUMBNAIL_BUDGET),
             pending_pages: Vec::new(),
             thumbnail_width: 120,
