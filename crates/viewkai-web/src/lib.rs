@@ -854,7 +854,7 @@ impl eframe::App for DemoApp {
 
         if let Some(active_tab) = self.active_sidebar_tab() {
             egui::Panel::left("viewkai.sidebar")
-                .default_size(260.0)
+                .default_size(150.0)
                 .resizable(false)
                 .show_inside(ui, |ui| {
                     let outline_visible = self.viewer.outline().visible();
