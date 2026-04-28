@@ -4007,6 +4007,7 @@ dependencies = [
  "egui_kittest",
  "viewkai-core",
  "viewkai-engine",
+ "web-sys",
 ]
 
 [[package]]

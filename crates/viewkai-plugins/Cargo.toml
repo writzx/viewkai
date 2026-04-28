@@ -20,6 +20,9 @@ egui-phosphor = { workspace = true }
 viewkai-core = { path = "../viewkai-core" }
 viewkai-engine = { path = "../viewkai-engine" }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = "0.3"
+
 [dev-dependencies]
 egui_kittest = { version = "0.34", features = ["wgpu", "snapshot"] }
 
