@@ -386,7 +386,7 @@ impl ViewerPlugin for TextLayerPlugin {
                 ui.painter().rect_stroke(
                     screen_rect,
                     0.0,
-                    Stroke::new(2.0, Color32::RED),
+                    Stroke::new(1.0, Color32::RED),
                     egui::StrokeKind::Middle,
                 );
             }
