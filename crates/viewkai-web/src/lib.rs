@@ -525,15 +525,14 @@ impl DemoApp {
 
     fn current_displayed_page(&self) -> Option<usize> {
         self.viewer
-            .visible_pages()
-            .first()
+            .dominant_page()
             .map(|page| page.0)
             .or(self.last_displayed_page)
             .or((self.total_pages > 0).then_some(0))
     }
 
     fn sync_page_input_from_visible_page(&mut self, input_focused: bool, now: f64) {
-        let visible_page = self.viewer.visible_pages().first().map(|page| page.0);
+        let visible_page = self.viewer.dominant_page().map(|page| page.0);
         let last_page = self.last_displayed_page;
 
         if input_focused {

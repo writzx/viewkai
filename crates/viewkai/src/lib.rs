@@ -96,6 +96,7 @@ pub struct Viewer {
     selection_color: Color32,
     library_shortcuts_enabled: bool,
     last_visible_pages: Vec<PageIndex>,
+    dominant_page: Option<PageIndex>,
     page_rotations: HashMap<PageIndex, PdfPageRotation>,
 }
 
@@ -126,6 +127,7 @@ impl Viewer {
             selection_color: Color32::from_rgba_unmultiplied(70, 120, 210, 96),
             library_shortcuts_enabled: true,
             last_visible_pages: Vec::new(),
+            dominant_page: None,
             page_rotations: HashMap::new(),
         };
         viewer.register_plugins();
@@ -253,6 +255,12 @@ impl Viewer {
     #[must_use]
     pub fn visible_pages(&self) -> &[PageIndex] {
         &self.last_visible_pages
+    }
+
+    /// Return the page at the center of the viewport ("dominant" page).
+    #[must_use]
+    pub fn dominant_page(&self) -> Option<PageIndex> {
+        self.dominant_page
     }
 
     /// Returns a shared reference to the built-in text-layer plugin.
@@ -705,6 +713,7 @@ impl Viewer {
         self.pending_scroll_to_page = None;
         self.pending_scroll.set(None);
         self.last_visible_pages.clear();
+        self.dominant_page = None;
         self.page_rotations.clear();
     }
 
@@ -829,6 +838,7 @@ impl Viewer {
                     &mut self.current_spread_index,
                     &mut self.plugins,
                     &mut self.last_visible_pages,
+                    &mut self.dominant_page,
                     &self.page_rotations,
                     self.selection_color,
                     self.library_shortcuts_enabled,
@@ -860,6 +870,7 @@ impl Viewer {
         current_spread_index: &mut Option<usize>,
         plugins: &mut PluginRegistry,
         last_visible_pages: &mut Vec<PageIndex>,
+        dominant_page: &mut Option<PageIndex>,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
@@ -876,6 +887,7 @@ impl Viewer {
                 current_page_single_mode,
                 plugins,
                 last_visible_pages,
+                dominant_page,
                 page_rotations,
                 selection_color,
                 library_shortcuts_enabled,
@@ -891,6 +903,7 @@ impl Viewer {
                 viewer_pending_scroll,
                 plugins,
                 last_visible_pages,
+                dominant_page,
                 page_rotations,
                 selection_color,
                 library_shortcuts_enabled,
@@ -907,6 +920,7 @@ impl Viewer {
                 cover_separate,
                 plugins,
                 last_visible_pages,
+                dominant_page,
                 page_rotations,
                 selection_color,
                 library_shortcuts_enabled,
@@ -928,6 +942,7 @@ impl Viewer {
         current_page: &mut Option<PageIndex>,
         plugins: &mut PluginRegistry,
         last_visible_pages: &mut Vec<PageIndex>,
+        dominant_page: &mut Option<PageIndex>,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
@@ -1032,6 +1047,7 @@ impl Viewer {
 
                 last_visible_pages.clear();
                 last_visible_pages.push(PageIndex(page_idx));
+                *dominant_page = Some(PageIndex(page_idx));
                 Self::render_queued_pages(
                     ui,
                     document,
@@ -1088,6 +1104,7 @@ impl Viewer {
         viewer_pending_scroll: &mut Option<usize>,
         plugins: &mut PluginRegistry,
         last_visible_pages: &mut Vec<PageIndex>,
+        dominant_page: &mut Option<PageIndex>,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
@@ -1147,6 +1164,20 @@ impl Viewer {
                 last_visible_pages.extend(vis_set.pages.iter().copied());
 
                 let center_y = scroll_offset + viewport_rect.height() / 2.0;
+                let dominant_idx = page_tops
+                    .iter()
+                    .zip(page_heights.iter())
+                    .enumerate()
+                    .min_by(|(_, (a_top, a_height)), (_, (b_top, b_height))| {
+                        let a_center = *a_top + *a_height / 2.0;
+                        let b_center = *b_top + *b_height / 2.0;
+                        let da = (a_center - center_y).abs();
+                        let db = (b_center - center_y).abs();
+                        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .map_or(0, |(i, _)| i);
+                *dominant_page = Some(PageIndex(dominant_idx));
+
                 let to_render = Self::prioritize_renders(&vis_set, &page_tops, center_y);
                 Self::render_queued_pages(
                     ui,
@@ -1210,6 +1241,7 @@ impl Viewer {
         cover_separate: bool,
         plugins: &mut PluginRegistry,
         last_visible_pages: &mut Vec<PageIndex>,
+        dominant_page: &mut Option<PageIndex>,
         page_rotations: &HashMap<PageIndex, PdfPageRotation>,
         selection_color: Color32,
         library_shortcuts_enabled: bool,
@@ -1382,6 +1414,7 @@ impl Viewer {
                 if let Some(right_idx) = right_idx {
                     last_visible_pages.push(PageIndex(right_idx));
                 }
+                *dominant_page = Some(PageIndex(left_idx));
                 Self::render_queued_pages(
                     ui,
                     document,
